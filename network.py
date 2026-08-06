@@ -1,11 +1,13 @@
-from typing import Optional, Tuple, Dict, Any
+from typing import Any
+
 import numpy as np
 
 from projections import ProjectionOperations, TrigState
 
+
 class BaseNet:
-    def __init__(self, weights: Optional[np.ndarray] = None) -> None:
-        self.weights: Optional[np.ndarray] = weights
+    def __init__(self, weights: np.ndarray | None = None) -> None:
+        self.weights: np.ndarray | None = weights
 
     @staticmethod
     def with_weights(w_arr: np.ndarray) -> "BaseNet":
@@ -21,54 +23,62 @@ class BaseNet:
         # projection via nonlinear activation
         return np.cos(beta_value)
 
+
 class ClassNet(BaseNet):
     @staticmethod
     def with_weights(w_arr: np.ndarray) -> "ClassNet":
-            return ClassNet(weights=w_arr)
+        return ClassNet(weights=w_arr)
 
     def predict(self, x_mat: np.ndarray) -> np.ndarray:
         # returns tanh for classification
         beta_value: np.ndarray = self.compute_beta(x_mat)
         return np.tanh(beta_value)
 
+
 class RegNet:
     def __init__(
         self,
-        w_alpha: Optional[np.ndarray] = None,
-        w_beta: Optional[np.ndarray] = None,
-        w_gamma: Optional[np.ndarray] = None,
+        w_alpha: np.ndarray | None = None,
+        w_beta: np.ndarray | None = None,
+        w_gamma: np.ndarray | None = None,
         theta: float = 0.0,
         omega: float = 0.0,
     ) -> None:
-        self.w_alpha: Optional[np.ndarray] = w_alpha
-        self.w_beta: Optional[np.ndarray] = w_beta
-        self.w_gamma: Optional[np.ndarray] = w_gamma
+        self.w_alpha: np.ndarray | None = w_alpha
+        self.w_beta: np.ndarray | None = w_beta
+        self.w_gamma: np.ndarray | None = w_gamma
         self.theta: float = theta
         self.omega: float = omega
 
     @staticmethod
     def with_parameters(
-        w_alpha: Optional[np.ndarray],
-        w_beta: Optional[np.ndarray],
-        w_gamma: Optional[np.ndarray],
+        w_alpha: np.ndarray | None,
+        w_beta: np.ndarray | None,
+        w_gamma: np.ndarray | None,
         theta: float,
-        omega: float
+        omega: float,
     ) -> "RegNet":
         return RegNet(w_alpha, w_beta, w_gamma, theta, omega)
 
-    def _get_angles(self, x_mat: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_angles(
+        self, x_mat: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self.w_alpha is None or self.w_beta is None or self.w_gamma is None:
             raise ValueError("weights missing")
         return x_mat @ self.w_alpha, x_mat @ self.w_beta, x_mat @ self.w_gamma
 
     def predict(self, x_mat: np.ndarray) -> np.ndarray:
         alpha, beta, gamma = self._get_angles(x_mat)
-        state: TrigState = ProjectionOperations.make_state(alpha, beta, gamma, self.theta, self.omega)
+        state: TrigState = ProjectionOperations.make_state(
+            alpha, beta, gamma, self.theta, self.omega
+        )
         return ProjectionOperations.compute_output(state)
 
-    def compute_gradients(self, x_mat: np.ndarray, y_raw: np.ndarray) -> Dict[str, Any]:
+    def compute_gradients(self, x_mat: np.ndarray, y_raw: np.ndarray) -> dict[str, Any]:
         alpha, beta, gamma = self._get_angles(x_mat)
-        state: TrigState = ProjectionOperations.make_state(alpha, beta, gamma, self.theta, self.omega)
+        state: TrigState = ProjectionOperations.make_state(
+            alpha, beta, gamma, self.theta, self.omega
+        )
 
         y_line: np.ndarray = ProjectionOperations.compute_output(state)
         diff_value: np.ndarray = y_line - y_raw

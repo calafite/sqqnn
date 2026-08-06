@@ -1,8 +1,11 @@
+from typing import Any
+
 import numpy as np
 
-from .shared import SharedRNG
 from network import RegNet
-from typing import Dict, Any
+
+from .shared import SharedRNG
+
 
 class LlsSolver:
     def __init__(self, epsilon: float = 1e-16) -> None:
@@ -21,6 +24,7 @@ class LlsSolver:
         x_pinv: np.ndarray = np.linalg.pinv(x_mat)
         return x_pinv @ y_trans
 
+
 class GdSolver:
     def __init__(self, step_size: float = 0.01, max_epochs: int = 100) -> None:
         self.step_size: float = step_size
@@ -29,16 +33,30 @@ class GdSolver:
     def fit(self, net: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> RegNet:
         n_features: int = x_mat.shape[1]
 
-        w_alpha: np.ndarray = net.w_alpha if net.w_alpha is not None else SharedRNG.rng.random(n_features) * 0.1
-        w_beta: np.ndarray = net.w_beta if net.w_beta is not None else SharedRNG.rng.random(n_features) * 0.1
-        w_gamma: np.ndarray = net.w_gamma if net.w_gamma is not None else SharedRNG.rng.random(n_features) * 0.1
+        w_alpha: np.ndarray = (
+            net.w_alpha
+            if net.w_alpha is not None
+            else SharedRNG.rng.random(n_features) * 0.1
+        )
+        w_beta: np.ndarray = (
+            net.w_beta
+            if net.w_beta is not None
+            else SharedRNG.rng.random(n_features) * 0.1
+        )
+        w_gamma: np.ndarray = (
+            net.w_gamma
+            if net.w_gamma is not None
+            else SharedRNG.rng.random(n_features) * 0.1
+        )
         theta: float = net.theta
         omega: float = net.omega
 
-        current_net: RegNet = net.with_parameters(w_alpha, w_beta, w_gamma, theta,omega)
+        current_net: RegNet = net.with_parameters(
+            w_alpha, w_beta, w_gamma, theta, omega
+        )
 
         for _ in range(self.max_epochs):
-            gradients: Dict[str, Any] = current_net.compute_gradients(x_mat, y_raw)
+            gradients: dict[str, Any] = current_net.compute_gradients(x_mat, y_raw)
 
             w_alpha = w_alpha - self.step_size * gradients["w_alpha"]
             w_beta = w_beta - self.step_size * gradients["w_beta"]
@@ -46,6 +64,8 @@ class GdSolver:
             theta = theta - self.step_size * gradients["theta"]
             omega = omega - self.step_size * gradients["omega"]
 
-            current_net = current_net.with_parameters(w_alpha, w_beta, w_gamma, theta, omega)
+            current_net = current_net.with_parameters(
+                w_alpha, w_beta, w_gamma, theta, omega
+            )
 
         return current_net

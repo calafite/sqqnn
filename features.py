@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class FeatureMap:
     def __init__(self, degree: int = 1) -> None:
         self.degree: int = degree

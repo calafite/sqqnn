@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict
+
 
 class ModelMetrics:
     @staticmethod
@@ -12,7 +12,7 @@ class ModelMetrics:
         return float(np.mean(loss))
 
     @staticmethod
-    def compute_stats(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def compute_stats(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
         y_bin: np.ndarray = np.where(y_pred >= 0.0, 1.0, -1.0)
 
         tp_count: float = float(np.sum((y_bin == 1.0) & (y_true == 1.0)))
@@ -39,5 +39,5 @@ class ModelMetrics:
             "precision": prec_score,
             "sensitivity": sens_score,
             "specificity": spec_score,
-            "f1_score": f1_score
+            "f1_score": f1_score,
         }

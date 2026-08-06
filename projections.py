@@ -1,5 +1,7 @@
-from typing import Tuple, NamedTuple
+from typing import NamedTuple
+
 import numpy as np
+
 
 class TrigState(NamedTuple):
     sa: np.ndarray
@@ -13,20 +15,32 @@ class TrigState(NamedTuple):
     sw: float
     cw: float
 
+
 class ProjectionOperations:
     @staticmethod
-    def make_state(alpha: np.ndarray, beta: np.ndarray, gamma: np.ndarray, theta: float, omega: float) -> TrigState:
+    def make_state(
+        alpha: np.ndarray,
+        beta: np.ndarray,
+        gamma: np.ndarray,
+        theta: float,
+        omega: float,
+    ) -> TrigState:
         # caches trigonometric evaluations
         return TrigState(
-            np.sin(alpha), np.cos(alpha),
-            np.sin(beta), np.cos(beta),
-            np.sin(gamma), np.cos(gamma),
-            float(np.sin(theta)), float(np.cos(theta)),
-            float(np.sin(omega)), float(np.cos(omega))
+            np.sin(alpha),
+            np.cos(alpha),
+            np.sin(beta),
+            np.cos(beta),
+            np.sin(gamma),
+            np.cos(gamma),
+            float(np.sin(theta)),
+            float(np.cos(theta)),
+            float(np.sin(omega)),
+            float(np.cos(omega)),
         )
 
     @staticmethod
-    def _get_vw(s: TrigState) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_vw(s: TrigState) -> tuple[np.ndarray, np.ndarray]:
         # groups data dependent features
         v1: np.ndarray = s.cb
         v2: np.ndarray = -s.ca * s.sb
@@ -52,7 +66,9 @@ class ProjectionOperations:
         return w_vec @ v_mat
 
     @staticmethod
-    def compute_derivatives(s: TrigState) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def compute_derivatives(
+        s: TrigState,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         v_mat, w_vec = ProjectionOperations._get_vw(s)
 
         n_samples: int = s.sa.shape[0]

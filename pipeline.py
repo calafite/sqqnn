@@ -1,19 +1,19 @@
-from typing import Optional, Dict
 import numpy as np
 
 from features import FeatureMap
 from metrics import ModelMetrics
-from scaling import DataScaler
 from network import ClassNet, RegNet
-from solvers import LlsSolver, GdSolver
+from scaling import DataScaler
+from solvers import GdSolver, LlsSolver
+
 
 class ClassificationPipeline:
     def __init__(
         self,
-        feature_map: Optional[FeatureMap] = None,
-        x_scale: Optional[DataScaler] = None,
-        solver: Optional[LlsSolver] = None,
-        net: Optional[ClassNet] = None,
+        feature_map: FeatureMap | None = None,
+        x_scale: DataScaler | None = None,
+        solver: LlsSolver | None = None,
+        net: ClassNet | None = None,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
@@ -22,8 +22,8 @@ class ClassificationPipeline:
 
     def with_config(
         self,
-        feature_map: Optional[FeatureMap] = None,
-        solver: Optional[LlsSolver] = None
+        feature_map: FeatureMap | None = None,
+        solver: LlsSolver | None = None,
     ):
         # overriding components
         new_map: FeatureMap = feature_map or self.feature_map
@@ -47,18 +47,19 @@ class ClassificationPipeline:
         x_mat: np.ndarray = self.feature_map.build_matrix(x_norm)
         return self.net.predict(x_mat)
 
-    def evaluate(self, x_raw: np.ndarray, y_raw: np.ndarray) -> Dict[str, float]:
+    def evaluate(self, x_raw: np.ndarray, y_raw: np.ndarray) -> dict[str, float]:
         y_pred: np.ndarray = self.predict(x_raw)
         return ModelMetrics.compute_stats(y_raw, y_pred)
+
 
 class RegressionPipeline:
     def __init__(
         self,
-        feature_map: Optional[FeatureMap] = None,
-        x_scale: Optional[DataScaler] = None,
-        y_scale: Optional[DataScaler] = None,
-        solver: Optional[GdSolver] = None,
-        net: Optional[RegNet] = None
+        feature_map: FeatureMap | None = None,
+        x_scale: DataScaler | None = None,
+        y_scale: DataScaler | None = None,
+        solver: GdSolver | None = None,
+        net: RegNet | None = None,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
@@ -68,12 +69,14 @@ class RegressionPipeline:
 
     def with_config(
         self,
-        feature_map: Optional[FeatureMap] = None,
-        solver: Optional[GdSolver] = None,
+        feature_map: FeatureMap | None = None,
+        solver: GdSolver | None = None,
     ) -> "RegressionPipeline":
         new_map: FeatureMap = feature_map or self.feature_map
         new_solver: GdSolver = solver or self.solver
-        return RegressionPipeline(new_map, self.x_scale, self.y_scale, new_solver, self.net)
+        return RegressionPipeline(
+            new_map, self.x_scale, self.y_scale, new_solver, self.net
+        )
 
     def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> "RegressionPipeline":
         # scale to bounds
@@ -90,7 +93,9 @@ class RegressionPipeline:
         # optimise the weights with gradient descent!
         new_net: RegNet = self.solver.fit(self.net, x_mat, y_norm)
 
-        return RegressionPipeline(self.feature_map, new_x_scale, new_y_scale, self.solver, new_net)
+        return RegressionPipeline(
+            self.feature_map, new_x_scale, new_y_scale, self.solver, new_net
+        )
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         x_norm: np.ndarray = self.x_scale.scale_data(x_raw)
