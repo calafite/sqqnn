@@ -2,4 +2,5 @@ import numpy as np
 
 
 class SharedRNG:
-    rng = np.random.default_rng()
+    # homage to jay pee
+    rng = np.random.default_rng(67)
