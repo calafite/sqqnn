@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from projections import ProjectionOperations, TrigState
+from core.projections import ProjectionOperations, TrigState
 
 
 class BaseNet:

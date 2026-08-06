@@ -1,10 +1,10 @@
 import numpy as np
 from sklearn.datasets import make_moons
 
-from features import FeatureMap
-from pipeline import ClassificationPipeline, RegressionPipeline
-from solvers import GdSolver, LlsSolver
-from styling import OutputFormatter
+from data.features import FeatureMap
+from training.pipeline import ClassificationPipeline, RegressionPipeline
+from training.solvers import GdSolver, LlsSolver
+from utils.styling import OutputFormatter
 
 
 class Tester:

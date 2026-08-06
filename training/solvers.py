@@ -2,8 +2,8 @@ from typing import Any
 
 import numpy as np
 
-from network import RegNet
-from shared import SharedRNG
+from core.network import RegNet
+from utils.shared import SharedRNG
 
 
 class LlsSolver:
