@@ -65,10 +65,19 @@ class OutputFormatter:
         print(f"\n{styled}")
 
     @staticmethod
-    def metric(name: str, value: float, indent: int = 12) -> None:
+    def config(name: str, value: Any, indent: int = 12) -> None:
         pad_space: str = " " * indent
-
         key_str: ColouredString = colourise(name).white()
-        val_str: ColouredString = colourise(f"{value:.4f}").green().bold()
+        val_str: ColouredString = colourise(str(value)).cyan()
 
-        print(f"{pad_space}{key_str}: {val_str}")
+        print(f"{pad_space}* {key_str}: {val_str}")
+
+    @staticmethod
+    def metric(name: str, value: float | str, indent: int = 12) -> None:
+        pad_space: str = " " * indent
+        key_str: ColouredString = colourise(name).white()
+
+        value_fmt: str = f"{value:.4f}" if isinstance(value, float) else str(value)
+        val_str: ColouredString = colourise(value_fmt).green().bold()
+
+        print(f"{pad_space}  {key_str}: {val_str}")

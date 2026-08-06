@@ -1,10 +1,10 @@
 import numpy as np
 
-from data.features import FeatureMap
-from utils.metrics import ModelMetrics
 from core.network import ClassNet, RegNet
+from data.features import FeatureMap
 from data.scaling import DataScaler
 from training.solvers import AdamSolver, LlsSolver
+from utils.metrics import ModelMetrics
 
 
 class ClassificationPipeline:

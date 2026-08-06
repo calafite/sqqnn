@@ -34,7 +34,6 @@ class LlsSolver:
         return np.linalg.solve(gram_matrix, target_vector)
 
 
-
 class AdamSolver:
     def __init__(
         self, optimiser: AdamOptimiser | None = None, max_epochs: int = 100
@@ -45,6 +44,8 @@ class AdamSolver:
     def fit(self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> RegNet:
         n_features: int = x_mat.shape[1]
 
+        # initialises weights across the full phase spectrum [-pi, pi] to avoid
+        # the vanishing gradient saddle point at the origin.
         w_alpha: np.ndarray = self.resolve_weights(network.w_alpha, n_features)
         w_beta: np.ndarray = self.resolve_weights(network.w_beta, n_features)
         w_gamma: np.ndarray = self.resolve_weights(network.w_gamma, n_features)
@@ -84,19 +85,15 @@ class AdamSolver:
     def resolve_weights(
         weights: np.ndarray | None,
         n_features: int,
-        minimum: float = -0.1,
-        maximum: float = 0.1,
-    ):
+    ) -> np.ndarray:
         rng: Any = SharedRNG.rng
         if weights is not None:
             return weights
-        else:
-            return rng.uniform(minimum, maximum, size=n_features)
+        return rng.uniform(-np.pi, np.pi, size=n_features)
 
     @staticmethod
-    def resolve_scalars(value, minimum=-0.1, maximum=0.1):
-        rng = SharedRNG.rng
+    def resolve_scalars(value: float) -> float:
+        rng: Any = SharedRNG.rng
         if value != 0.0:
             return value
-        else:
-            return float(rng.uniform(minimum, maximum))
+        return float(rng.uniform(-np.pi, np.pi))

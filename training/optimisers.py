@@ -1,6 +1,34 @@
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
+
+
+class Optimiser(Protocol):
+    def update(
+        self, parameters: dict[str, Any], gradients: dict[str, Any]
+    ) -> dict[str, Any]: ...
+
+
+class GradientDescentOptimiser:
+    def __init__(self, learning_rate: float = 0.1, l2_penalty: float = 0.0) -> None:
+        self.learning_rate: float = learning_rate
+        self.l2_penalty: float = l2_penalty
+
+    def update(
+        self, parameters: dict[str, Any], gradients: dict[str, Any]
+    ) -> dict[str, Any]:
+        updated_parameters: dict[str, Any] = {}
+
+        for key, parameter in parameters.items():
+            gradient: Any = gradients[key]
+
+            if self.l2_penalty > 0.0:
+                gradient = gradient + self.l2_penalty * parameter
+
+            step_update: Any = self.learning_rate * gradient
+            updated_parameters[key] = parameter - step_update
+
+        return updated_parameters
 
 
 class AdamOptimiser:
