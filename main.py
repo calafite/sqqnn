@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from sklearn.datasets import make_moons
 
-from data.features import FeatureMap
+from data.features import BasisType, FeatureMap
 from training.optimisers import AdamOptimiser
 from training.pipeline import ClassificationPipeline, RegressionPipeline
 from training.solvers import AdamSolver, LlsSolver
@@ -16,7 +16,7 @@ class Tester:
         x_raw: np.ndarray = Helpers.xor_X()
         y_raw: np.ndarray = Helpers.xor_Y()
 
-        feature_map: FeatureMap = FeatureMap(degree=1)
+        feature_map: FeatureMap = FeatureMap(degree=1, basis=BasisType.STANDARD)
         optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.1, l2_penalty=0.001)
         solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=500)
 
@@ -41,12 +41,16 @@ class Tester:
             x_test == 0, 1.0, np.sin(x_test) / x_test
         ).flatten()
 
-        feature_map: FeatureMap = FeatureMap(degree=1)
-        optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.01, l2_penalty=0.0001)
-        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=25000)
+        # Using Fourier features properly scaled to [-1, 1] to capture oscillations
+        feature_map: FeatureMap = FeatureMap(degree=2, basis=BasisType.FOURIER)
 
+        # Lowered the learning rate slightly for smoother convergence in the frequency domain
+        optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.005, l2_penalty=1e-5)
+        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=7000)
+
+        # scale_x=True is critical here!
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
-            feature_map=feature_map, solver=solver
+            feature_map=feature_map, solver=solver, scale_x=True
         )
         fitted_pipeline: RegressionPipeline = pipeline.fit(x_train, y_train)
 
@@ -69,7 +73,8 @@ class Tester:
         x_test: np.ndarray = x_raw[1000:]
         y_test: np.ndarray = y_trans[1000:]
 
-        feature_map: FeatureMap = FeatureMap(degree=4)
+        # Chebyshev prevents Gram matrix singularity at high degrees
+        feature_map: FeatureMap = FeatureMap(degree=5, basis=BasisType.CHEBYSHEV)
         solver: LlsSolver = LlsSolver(l2_penalty=1e-4)
 
         pipeline: ClassificationPipeline = ClassificationPipeline().with_config(
