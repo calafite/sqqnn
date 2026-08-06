@@ -1,19 +1,24 @@
-import numpy as np
 from typing import Any
+
+import numpy as np
 from sklearn.datasets import make_moons
 
 from data.features import FeatureMap
+from training.optimisers import AdamOptimiser
 from training.pipeline import ClassificationPipeline, RegressionPipeline
-from training.solvers import GdSolver, LlsSolver
+from training.solvers import AdamSolver, LlsSolver
 from utils.styling import OutputFormatter
+
 
 class Tester:
     @staticmethod
     def run_xor() -> None:
         x_raw: np.ndarray = Helpers.xor_X()
         y_raw: np.ndarray = Helpers.xor_Y()
-        feature_map: FeatureMap = FeatureMap(degree=1)
-        solver: GdSolver = GdSolver(step_size=0.1, max_epochs=200)
+
+        feature_map: FeatureMap = FeatureMap(degree=2)
+        optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.1, l2_penalty=0.001)
+        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=500)
 
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver, scale_x=True
@@ -37,7 +42,8 @@ class Tester:
         ).flatten()
 
         feature_map: FeatureMap = FeatureMap(degree=1)
-        solver: GdSolver = GdSolver(step_size=0.01, max_epochs=70000)
+        optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.01, l2_penalty=0.0001)
+        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=1000)
 
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver
@@ -75,7 +81,6 @@ class Tester:
 
         for metric_name, score in stats.items():
             OutputFormatter.metric(metric_name, score)
-
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         OutputFormatter.title("XOR GATE | REGRESSION")

@@ -4,7 +4,7 @@ from data.features import FeatureMap
 from utils.metrics import ModelMetrics
 from core.network import ClassNet, RegNet
 from data.scaling import DataScaler
-from training.solvers import GdSolver, LlsSolver
+from training.solvers import AdamSolver, LlsSolver
 
 
 class ClassificationPipeline:
@@ -74,25 +74,25 @@ class RegressionPipeline:
         feature_map: FeatureMap | None = None,
         x_scale: DataScaler | None = None,
         y_scale: DataScaler | None = None,
-        solver: GdSolver | None = None,
+        solver: AdamSolver | None = None,
         net: RegNet | None = None,
         scale_x: bool = False,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
         self.y_scale: DataScaler = y_scale or DataScaler()
-        self.solver: GdSolver = solver or GdSolver()
+        self.solver: AdamSolver = solver or AdamSolver()
         self.net: RegNet = net or RegNet()
         self.scale_x: bool = scale_x
 
     def with_config(
         self,
         feature_map: FeatureMap | None = None,
-        solver: GdSolver | None = None,
+        solver: AdamSolver | None = None,
         scale_x: bool | None = None,
     ) -> "RegressionPipeline":
         new_map: FeatureMap = feature_map or self.feature_map
-        new_solver: GdSolver = solver or self.solver
+        new_solver: AdamSolver = solver or self.solver
         use_x_scale: bool = self.scale_x if scale_x is None else scale_x
         return RegressionPipeline(
             new_map, self.x_scale, self.y_scale, new_solver, self.net, use_x_scale
