@@ -16,7 +16,7 @@ class Tester:
         x_raw: np.ndarray = Helpers.xor_X()
         y_raw: np.ndarray = Helpers.xor_Y()
 
-        feature_map: FeatureMap = FeatureMap(degree=2)
+        feature_map: FeatureMap = FeatureMap(degree=1)
         optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.1, l2_penalty=0.001)
         solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=500)
 
@@ -43,7 +43,7 @@ class Tester:
 
         feature_map: FeatureMap = FeatureMap(degree=1)
         optimiser: AdamOptimiser = AdamOptimiser(learning_rate=0.01, l2_penalty=0.0001)
-        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=1000)
+        solver: AdamSolver = AdamSolver(optimiser=optimiser, max_epochs=25000)
 
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver
@@ -70,7 +70,7 @@ class Tester:
         y_test: np.ndarray = y_trans[1000:]
 
         feature_map: FeatureMap = FeatureMap(degree=4)
-        solver: LlsSolver = LlsSolver()
+        solver: LlsSolver = LlsSolver(l2_penalty=1e-4)
 
         pipeline: ClassificationPipeline = ClassificationPipeline().with_config(
             feature_map=feature_map, solver=solver

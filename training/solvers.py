@@ -28,7 +28,7 @@ class LlsSolver:
 
         n_features: int = x_mat.shape[1]
         reg_matrix: np.ndarray = self.l2_penalty * np.eye(n_features)
-        gram_matrix: np.ndarray = x_mat @ x_mat + reg_matrix
+        gram_matrix: np.ndarray = x_mat.T @ x_mat + reg_matrix
         target_vector: np.ndarray = x_mat.T @ y_trans
 
         return np.linalg.solve(gram_matrix, target_vector)
