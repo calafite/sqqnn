@@ -13,9 +13,13 @@ class Tester:
         y_raw: np.ndarray = Helpers.xor_Y()
         feature_map: FeatureMap = FeatureMap(degree=1)
         solver: GdSolver = GdSolver(step_size=0.1, max_epochs=200)
+
+        # activate input scaling exclusively for logic gates
+        # to ensure origin-centered symmetry.
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
-            feature_map=feature_map, solver=solver
+            feature_map=feature_map, solver=solver, scale_x=True
         )
+
         fitted_pipeline: RegressionPipeline = pipeline.fit(x_raw, y_raw)
         mse_value: float = fitted_pipeline.evaluate(x_raw, y_raw)
         print(f"xor mse: {mse_value:.4f}")
@@ -36,6 +40,9 @@ class Tester:
 
         feature_map: FeatureMap = FeatureMap(degree=1)
         solver: GdSolver = GdSolver(step_size=0.01, max_epochs=70000)
+
+        # scale_x defaults to False for regressions, preserving the domain scale
+        # required for learning the frequencies of the sinc function
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver
         )
@@ -65,6 +72,7 @@ class Tester:
         feature_map: FeatureMap = FeatureMap(degree=2)
         solver: LlsSolver = LlsSolver()
 
+        # ClassificationPipeline defaults to scale_x=True to avoid ill-conditioned matrices
         pipeline: ClassificationPipeline = ClassificationPipeline().with_config(
             feature_map=feature_map, solver=solver
         )
