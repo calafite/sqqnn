@@ -35,7 +35,7 @@ class Tester:
         ).flatten()
 
         feature_map: FeatureMap = FeatureMap(degree=1)
-        solver: GdSolver = GdSolver(step_size=0.01, max_epochs=1000)
+        solver: GdSolver = GdSolver(step_size=0.01, max_epochs=70000)
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver
         )

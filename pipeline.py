@@ -85,7 +85,7 @@ class RegressionPipeline:
 
         # reshape and scale to bounds
         y_col: np.ndarray = y_raw.reshape(-1, 1)
-        new_y_scale: DataScaler = self.y_scale.fit_bounds(y_raw)
+        new_y_scale: DataScaler = self.y_scale.fit_bounds(y_col)
         y_norm: np.ndarray = new_y_scale.scale_data(y_col).flatten()
 
         x_mat: np.ndarray = self.feature_map.build_matrix(x_norm)

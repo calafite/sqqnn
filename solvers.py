@@ -4,7 +4,7 @@ import numpy as np
 
 from network import RegNet
 
-from .shared import SharedRNG
+from shared import SharedRNG
 
 
 class LlsSolver:
