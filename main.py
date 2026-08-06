@@ -1,11 +1,11 @@
 import numpy as np
+from typing import Any
 from sklearn.datasets import make_moons
 
 from data.features import FeatureMap
 from training.pipeline import ClassificationPipeline, RegressionPipeline
 from training.solvers import GdSolver, LlsSolver
 from utils.styling import OutputFormatter
-
 
 class Tester:
     @staticmethod
@@ -77,6 +77,15 @@ class Tester:
             OutputFormatter.metric(metric_name, score)
 
 
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        OutputFormatter.title("XOR GATE | REGRESSION")
+        self.run_xor()
+        OutputFormatter.title("SINC FUNCTION | REGRESSION")
+        self.run_sinc()
+        OutputFormatter.title("TWO MOONS | CLASSIFICATION")
+        self.run_moons()
+
+
 class Helpers:
     @staticmethod
     def xor_X() -> np.ndarray:
@@ -95,11 +104,5 @@ class Helpers:
 
 
 if __name__ == "__main__":
-    OutputFormatter.title("XOR GATE | REGRESSION")
-    Tester.run_xor()
-
-    OutputFormatter.title("SINC FUNCTION | REGRESSION")
-    Tester.run_sinc()
-
-    OutputFormatter.title("TWO MOONS | CLASSIFICATION")
-    Tester.run_moons()
+    tester = Tester()
+    tester()
