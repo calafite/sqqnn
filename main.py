@@ -4,6 +4,7 @@ from sklearn.datasets import make_moons
 from features import FeatureMap
 from pipeline import ClassificationPipeline, RegressionPipeline
 from solvers import GdSolver, LlsSolver
+from styling import OutputFormatter
 
 
 class Tester:
@@ -14,21 +15,18 @@ class Tester:
         feature_map: FeatureMap = FeatureMap(degree=1)
         solver: GdSolver = GdSolver(step_size=0.1, max_epochs=200)
 
-        # activate input scaling exclusively for logic gates
-        # to ensure origin-centered symmetry.
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver, scale_x=True
         )
 
         fitted_pipeline: RegressionPipeline = pipeline.fit(x_raw, y_raw)
         mse_value: float = fitted_pipeline.evaluate(x_raw, y_raw)
-        print(f"xor mse: {mse_value:.4f}")
+
+        OutputFormatter.metric("MSE", mse_value)
 
     @staticmethod
     def run_sinc() -> None:
-        # bounds defined by leandro for the sinc function experiment
         x_train: np.ndarray = np.linspace(-15, 15, 800).reshape(-1, 1)
-        # handles division by zero at the origin safely
         y_train: np.ndarray = np.where(
             x_train == 0, 1.0, np.sin(x_train) / x_train
         ).flatten()
@@ -41,25 +39,22 @@ class Tester:
         feature_map: FeatureMap = FeatureMap(degree=1)
         solver: GdSolver = GdSolver(step_size=0.01, max_epochs=70000)
 
-        # scale_x defaults to False for regressions, preserving the domain scale
-        # required for learning the frequencies of the sinc function
         pipeline: RegressionPipeline = RegressionPipeline().with_config(
             feature_map=feature_map, solver=solver
         )
         fitted_pipeline: RegressionPipeline = pipeline.fit(x_train, y_train)
 
         mse_value: float = fitted_pipeline.evaluate(x_test, y_test)
-        print(f"sinc test mse: {mse_value:.4f}")
+
+        OutputFormatter.metric("MSE", mse_value)
 
     @staticmethod
     def run_moons() -> None:
-        # synthetic dataset generation
         x_raw, y_raw = make_moons(n_samples=1100, noise=0.07, random_state=67)
 
         assert isinstance(x_raw, np.ndarray)
         assert isinstance(y_raw, np.ndarray)
 
-        # recalibrates labels from [0, 1] to [-1, 1]
         y_trans: np.ndarray = np.where(y_raw == 0, -1.0, 1.0)
 
         x_train: np.ndarray = x_raw[:1000]
@@ -68,11 +63,9 @@ class Tester:
         x_test: np.ndarray = x_raw[1000:]
         y_test: np.ndarray = y_trans[1000:]
 
-        # increasing the degree provides the non-linearity needed to separate the moons
-        feature_map: FeatureMap = FeatureMap(degree=2)
+        feature_map: FeatureMap = FeatureMap(degree=4)
         solver: LlsSolver = LlsSolver()
 
-        # ClassificationPipeline defaults to scale_x=True to avoid ill-conditioned matrices
         pipeline: ClassificationPipeline = ClassificationPipeline().with_config(
             feature_map=feature_map, solver=solver
         )
@@ -80,35 +73,33 @@ class Tester:
 
         stats: dict[str, float] = fitted_pipeline.evaluate(x_test, y_test)
 
-        print("two moons stats:")
-        for metric, score in stats.items():
-            print(f"  {metric}: {score:.4f}")
+        for metric_name, score in stats.items():
+            OutputFormatter.metric(metric_name, score)
 
 
 class Helpers:
     @staticmethod
     def xor_X() -> np.ndarray:
-        X: np.ndarray = np.zeros((4, 2))
-        k = 0
+        x_mat: np.ndarray = np.zeros((4, 2))
+        index = 0
         for x1 in [0, 1]:
             for x2 in [0, 1]:
-                X[k] = [x1, x2]
-                k += 1
-        return X
+                x_mat[index] = [x1, x2]
+                index += 1
+        return x_mat
 
     @staticmethod
     def xor_Y() -> np.ndarray:
-        # targets rescaled to match the quantum measurement bounds
-        Y: np.ndarray = np.array([-1.0, 1.0, 1.0, -1.0])
-        return Y
+        y_vec: np.ndarray = np.array([-1.0, 1.0, 1.0, -1.0])
+        return y_vec
 
 
 if __name__ == "__main__":
-    print("evaluating regression on xor gate...")
+    OutputFormatter.title("XOR GATE | REGRESSION")
     Tester.run_xor()
 
-    print("\nevaluating regression on sinc function...")
+    OutputFormatter.title("SINC FUNCTION | REGRESSION")
     Tester.run_sinc()
 
-    print("\nevaluating classification on two moons...")
+    OutputFormatter.title("TWO MOONS | CLASSIFICATION")
     Tester.run_moons()
