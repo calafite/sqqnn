@@ -48,16 +48,8 @@ class GdSolver:
             if net.w_gamma is not None
             else rng.uniform(-0.1, 0.1, size=n_features)
         )
-        theta: float = (
-            net.theta
-            if net.theta != 0.0
-            else float(rng.uniform(-0.1, 0.1))
-        )
-        omega: float = (
-            net.omega
-            if net.omega != 0.0
-            else float(rng.uniform(-0.1, 0.1))
-        )
+        theta: float = net.theta if net.theta != 0.0 else float(rng.uniform(-0.1, 0.1))
+        omega: float = net.omega if net.omega != 0.0 else float(rng.uniform(-0.1, 0.1))
 
         current_net: RegNet = net.with_parameters(
             w_alpha, w_beta, w_gamma, theta, omega
