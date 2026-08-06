@@ -3,7 +3,6 @@ from typing import Any
 import numpy as np
 
 from network import RegNet
-
 from shared import SharedRNG
 
 
@@ -32,24 +31,33 @@ class GdSolver:
 
     def fit(self, net: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> RegNet:
         n_features: int = x_mat.shape[1]
+        rng = SharedRNG.rng
 
         w_alpha: np.ndarray = (
             net.w_alpha
             if net.w_alpha is not None
-            else SharedRNG.rng.random(n_features) * 0.1
+            else rng.uniform(-0.1, 0.1, size=n_features)
         )
         w_beta: np.ndarray = (
             net.w_beta
             if net.w_beta is not None
-            else SharedRNG.rng.random(n_features) * 0.1
+            else rng.uniform(-0.1, 0.1, size=n_features)
         )
         w_gamma: np.ndarray = (
             net.w_gamma
             if net.w_gamma is not None
-            else SharedRNG.rng.random(n_features) * 0.1
+            else rng.uniform(-0.1, 0.1, size=n_features)
         )
-        theta: float = net.theta
-        omega: float = net.omega
+        theta: float = (
+            net.theta
+            if net.theta != 0.0
+            else float(rng.uniform(-0.1, 0.1))
+        )
+        omega: float = (
+            net.omega
+            if net.omega != 0.0
+            else float(rng.uniform(-0.1, 0.1))
+        )
 
         current_net: RegNet = net.with_parameters(
             w_alpha, w_beta, w_gamma, theta, omega
