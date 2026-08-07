@@ -40,6 +40,11 @@ class Visualiser:
 
         x_epochs: list[int] = list(range(1, len(history) + 1))
 
+        if len(history) > 1000:
+            step: int = max(1, len(history) // 1000)
+            x_epochs = x_epochs[::step]
+            history = history[::step]
+
         fig, ax = plt.subplots()
 
         sns.lineplot(x=x_epochs, y=history, color="#2563EB", linewidth=2.5, ax=ax)

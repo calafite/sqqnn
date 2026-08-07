@@ -118,8 +118,8 @@ class Tester:
         x_data, y_data = Helpers.get_xor_data()
         configs = GridSearch.generate(
             degree=[1, 2],
-            epochs=[100, 200, 300],
-            learning_rate=[0.1, 0.05]
+            epochs=[300],
+            learning_rate=[0.05]
         )
 
         best_run, _ = self._run_search(
@@ -138,8 +138,9 @@ class Tester:
         x_train, y_train, x_test, y_test = Helpers.get_sinc_data()
         configs = GridSearch.generate(
             degree=[1, 2, 3],
-            epochs=[5000, 10000],
-            learning_rate=[0.01, 0.05]
+            epochs=[70000],
+            learning_rate=[0.01, 0.001],
+            scale_x=[False, True]
         )
 
         best_run, _ = self._run_search(

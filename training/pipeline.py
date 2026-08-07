@@ -6,8 +6,8 @@ from core.network import ClassNet, RegNet
 from data.features import BasisType, FeatureMap
 from data.scaling import DataScaler
 from tracking.records import Hyperparameters, RunMetrics, RunRecord
-from training.optimisers import AdamOptimiser
-from training.solvers import AdamSolver, LlsSolver
+from training.optimisers import AdamOptimiser, GradientDescentOptimiser, Optimiser
+from training.solvers import GradientSolver, LlsSolver
 from utils.metrics import ModelMetrics
 
 
@@ -119,14 +119,14 @@ class RegressionPipeline:
         feature_map: FeatureMap | None = None,
         x_scale: DataScaler | None = None,
         y_scale: DataScaler | None = None,
-        solver: AdamSolver | None = None,
+        solver: GradientSolver | None = None,
         net: RegNet | None = None,
         scale_x: bool = False,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
         self.y_scale: DataScaler = y_scale or DataScaler()
-        self.solver: AdamSolver = solver or AdamSolver()
+        self.solver: GradientSolver = solver or GradientSolver()
         self.net: RegNet = net or RegNet()
         self.scale_x: bool = scale_x
 
@@ -135,8 +135,13 @@ class RegressionPipeline:
         basis_enum: BasisType = BasisType[config.basis.upper()]
         feature_map = FeatureMap(degree=config.degree, basis=basis_enum)
 
-        optimiser = AdamOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
-        solver = AdamSolver(optimiser=optimiser, max_epochs=config.epochs)
+        optimiser: Optimiser
+        if config.optimiser.lower() == "adam":
+            optimiser = AdamOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
+        else:
+            optimiser = GradientDescentOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
+
+        solver = GradientSolver(optimiser=optimiser, max_epochs=config.epochs)
 
         return cls(feature_map=feature_map, solver=solver, scale_x=config.scale_x)
 

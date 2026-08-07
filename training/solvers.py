@@ -3,7 +3,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from core.network import RegNet
-from training.optimisers import AdamOptimiser
+from training.optimisers import AdamOptimiser, Optimiser
 from utils.shared import SharedRNG
 
 
@@ -28,11 +28,11 @@ class LlsSolver:
         return np.linalg.solve(gram_matrix, target_vector)
 
 
-class AdamSolver:
+class GradientSolver:
     def __init__(
-        self, optimiser: AdamOptimiser | None = None, max_epochs: int = 100
+        self, optimiser: Optimiser | None = None, max_epochs: int = 100
     ) -> None:
-        self.optimiser: AdamOptimiser = optimiser or AdamOptimiser()
+        self.optimiser: Optimiser = optimiser or AdamOptimiser()
         self.max_epochs: int = max_epochs
 
     def fit(self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> tuple[RegNet, Sequence[float]]:
