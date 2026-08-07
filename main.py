@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
 import numpy as np
-from sklearn.datasets import load_breast_cancer, make_moons
+from sklearn.datasets import load_breast_cancer, load_digits, make_moons
 from sklearn.model_selection import train_test_split
 
 from tracking.records import Hyperparameters, RunRecord
@@ -59,6 +59,20 @@ class Helpers:
         y_raw: np.ndarray = np.where(y_labels == 0, -1.0, 1.0)
 
         x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=67)
+
+        assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
+        assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
+
+        return x_tr, y_tr, x_te, y_te
+
+    @staticmethod
+    def get_digits_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        x_raw, y_raw = load_digits(return_X_y=True)
+
+        assert isinstance(x_raw, np.ndarray)
+        assert isinstance(y_raw, np.ndarray)
+
+        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=42)
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
         assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
@@ -138,6 +152,7 @@ class Tester:
             y_val=y_test,
             maximise=False
         )
+
         Visualiser.plot_convergence(best_run, title="Sinc Convergence Over Time")
 
     def run_moons(self) -> None:
@@ -185,11 +200,33 @@ class Tester:
         for key, value in best_run.metrics.additional_stats.items():
             OutputFormatter.metric(key.title(), value)
 
+    def run_digits(self) -> None:
+        x_train, y_train, x_test, y_test = Helpers.get_digits_data()
+        configs = GridSearch.generate(
+            degree=[1, 2, 3],
+            scale_x=[True]
+        )
+
+        best_run, tracker = self._run_search(
+            title="DIGITS | MULTI-CLASS CLASSIFICATION",
+            pipeline=ClassificationPipeline(),
+            configs=configs,
+            x_train=x_train,
+            y_train=y_train,
+            x_val=x_test,
+            y_val=y_test,
+            maximise=True
+        )
+        Visualiser.plot_hyperparameter_comparison(
+            tracker.all_runs(), "degree", "Digits: Impact of Basis Degree"
+        )
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         self.run_xor()
         self.run_sinc()
         self.run_moons()
         self.run_wbcd()
+        self.run_digits()
 
 
 if __name__ == "__main__":

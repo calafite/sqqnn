@@ -13,11 +13,7 @@ class LlsSolver:
         self.l2_penalty: float = l2_penalty
 
     def fit(self, x_mat: np.ndarray, y_raw: np.ndarray) -> np.ndarray:
-        y_clip: np.ndarray = np.copy(y_raw)
-
-        y_clip[y_raw == -1] = -1.0 + self.epsilon
-        y_clip[y_raw == 1] = 1.0 - self.epsilon
-
+        y_clip: np.ndarray = np.clip(y_raw, -1.0 + self.epsilon, 1.0 - self.epsilon)
         y_trans: np.ndarray = np.arctanh(y_clip)
 
         if self.l2_penalty == 0:

@@ -12,7 +12,13 @@ class ModelMetrics:
         return float(np.mean(loss))
 
     @staticmethod
-    def compute_stats(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+    def compute_stats(
+        y_true: np.ndarray, y_pred: np.ndarray, is_multiclass: bool = False
+    ) -> dict[str, float]:
+        if is_multiclass:
+            accuracy: float = float(np.mean(y_true == y_pred))
+            return {"accuracy": accuracy}
+
         y_bin: np.ndarray = np.where(y_pred >= 0.0, 1.0, -1.0)
 
         tp_count: float = float(np.sum((y_bin == 1.0) & (y_true == 1.0)))

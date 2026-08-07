@@ -19,12 +19,14 @@ class ClassificationPipeline:
         solver: LlsSolver | None = None,
         net: ClassNet | None = None,
         scale_x: bool = True,
+        classes: np.ndarray | None = None,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
         self.solver: LlsSolver = solver or LlsSolver()
         self.net: ClassNet = net or ClassNet()
         self.scale_x: bool = scale_x
+        self.classes: np.ndarray | None = classes
 
     @classmethod
     def from_config(cls, config: Hyperparameters) -> "ClassificationPipeline":
@@ -48,17 +50,29 @@ class ClassificationPipeline:
         x_proc, new_scale = self._prepare_x(x_raw, fit_mode=True)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
 
-        weights: np.ndarray = self.solver.fit(x_mat, y_raw)
+        unique_classes = np.unique(y_raw)
+
+        if len(unique_classes) > 2:
+            n_samples, n_classes = len(y_raw), len(unique_classes)
+            y_encoded = -np.ones((n_samples, n_classes))
+            for i, class_val in enumerate(unique_classes):
+                y_encoded[y_raw == class_val, i] = 1.0
+        else:
+            y_encoded = y_raw
+
+        weights: np.ndarray = self.solver.fit(x_mat, y_encoded)
         new_net: ClassNet = self.net.with_weights(weights)
 
         fitted_pipeline = ClassificationPipeline(
-            self.feature_map, new_scale, self.solver, new_net, self.scale_x
+            feature_map=self.feature_map,
+            x_scale=new_scale,
+            solver=self.solver,
+            net=new_net,
+            scale_x=self.scale_x,
+            classes=unique_classes
         )
 
-        # evaluate static training loss (LLS calculates optimum directly in one epoch)
-        y_pred: np.ndarray = fitted_pipeline.predict(x_raw)
-        train_loss: float = ModelMetrics.hinge(y_raw, y_pred)
-
+        train_loss: float = ModelMetrics.hinge(y_encoded, new_net.predict(x_mat))
         return fitted_pipeline, [train_loss]
 
     def execute(
@@ -85,11 +99,18 @@ class ClassificationPipeline:
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-        return self.net.predict(x_mat)
+        raw_pred = self.net.predict(x_mat)
+
+        if self.classes is not None and len(self.classes) > 2:
+            class_indices = np.argmax(raw_pred, axis=1)
+            return self.classes[class_indices]
+
+        return raw_pred
 
     def evaluate(self, x_raw: np.ndarray, y_raw: np.ndarray) -> dict[str, float]:
         y_pred: np.ndarray = self.predict(x_raw)
-        return ModelMetrics.compute_stats(y_raw, y_pred)
+        is_multi = self.classes is not None and len(self.classes) > 2
+        return ModelMetrics.compute_stats(y_raw, y_pred, is_multiclass=is_multi)
 
 
 class RegressionPipeline:
