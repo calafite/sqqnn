@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -15,14 +15,12 @@ class LlsSolver:
     def fit(self, x_mat: np.ndarray, y_raw: np.ndarray) -> np.ndarray:
         y_clip: np.ndarray = np.copy(y_raw)
 
-        # clipping values to avoid singularity in arctanh
         y_clip[y_raw == -1] = -1.0 + self.epsilon
         y_clip[y_raw == 1] = 1.0 - self.epsilon
 
         y_trans: np.ndarray = np.arctanh(y_clip)
 
         if self.l2_penalty == 0:
-            # weight computation through pseudo inverse projection
             x_pinv: np.ndarray = np.linalg.pinv(x_mat)
             return x_pinv @ y_trans
 
@@ -41,11 +39,9 @@ class AdamSolver:
         self.optimiser: AdamOptimiser = optimiser or AdamOptimiser()
         self.max_epochs: int = max_epochs
 
-    def fit(self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> RegNet:
+    def fit(self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> tuple[RegNet, Sequence[float]]:
         n_features: int = x_mat.shape[1]
 
-        # initialises weights across the full phase spectrum [-pi, pi] to avoid
-        # the vanishing gradient saddle point at the origin.
         w_alpha: np.ndarray = self.resolve_weights(network.w_alpha, n_features)
         w_beta: np.ndarray = self.resolve_weights(network.w_beta, n_features)
         w_gamma: np.ndarray = self.resolve_weights(network.w_gamma, n_features)
@@ -56,8 +52,11 @@ class AdamSolver:
             w_alpha, w_beta, w_gamma, theta, omega
         )
 
+        history: list[float] = []
+
         for _ in range(self.max_epochs):
-            gradients: dict[str, Any] = current_network.compute_gradients(x_mat, y_raw)
+            gradients, loss = current_network.compute_gradients(x_mat, y_raw)
+            history.append(loss)
 
             parameters: dict[str, Any] = {
                 "w_alpha": current_network.w_alpha,
@@ -79,21 +78,14 @@ class AdamSolver:
                 float(updated_parameters["omega"]),
             )
 
-        return current_network
+        return current_network, history
 
     @staticmethod
-    def resolve_weights(
-        weights: np.ndarray | None,
-        n_features: int,
-    ) -> np.ndarray:
+    def resolve_weights(weights: np.ndarray | None, n_features: int) -> np.ndarray:
         rng: Any = SharedRNG.rng
-        if weights is not None:
-            return weights
-        return rng.uniform(-np.pi, np.pi, size=n_features)
+        return weights if weights is not None else rng.uniform(-np.pi, np.pi, size=n_features)
 
     @staticmethod
     def resolve_scalars(value: float) -> float:
         rng: Any = SharedRNG.rng
-        if value != 0.0:
-            return value
-        return float(rng.uniform(-np.pi, np.pi))
+        return value if value != 0.0 else float(rng.uniform(-np.pi, np.pi))

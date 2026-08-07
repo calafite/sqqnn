@@ -1,8 +1,12 @@
+from typing import Sequence
+
 import numpy as np
 
 from core.network import ClassNet, RegNet
-from data.features import FeatureMap
+from data.features import BasisType, FeatureMap
 from data.scaling import DataScaler
+from tracking.records import Hyperparameters, RunMetrics, RunRecord
+from training.optimisers import AdamOptimiser
 from training.solvers import AdamSolver, LlsSolver
 from utils.metrics import ModelMetrics
 
@@ -22,18 +26,12 @@ class ClassificationPipeline:
         self.net: ClassNet = net or ClassNet()
         self.scale_x: bool = scale_x
 
-    def with_config(
-        self,
-        feature_map: FeatureMap | None = None,
-        solver: LlsSolver | None = None,
-        scale_x: bool | None = None,
-    ) -> "ClassificationPipeline":
-        new_map: FeatureMap = feature_map or self.feature_map
-        new_solver: LlsSolver = solver or self.solver
-        use_x_scale: bool = self.scale_x if scale_x is None else scale_x
-        return ClassificationPipeline(
-            new_map, self.x_scale, new_solver, self.net, use_x_scale
-        )
+    @classmethod
+    def from_config(cls, config: Hyperparameters) -> "ClassificationPipeline":
+        basis_enum: BasisType = BasisType[config.basis.upper()]
+        feature_map = FeatureMap(degree=config.degree, basis=basis_enum)
+        solver = LlsSolver(l2_penalty=config.l2_penalty)
+        return cls(feature_map=feature_map, solver=solver, scale_x=config.scale_x)
 
     def _prepare_x(
         self, x_raw: np.ndarray, fit_mode: bool = False
@@ -44,19 +42,45 @@ class ClassificationPipeline:
         current_scale: DataScaler = (
             self.x_scale.fit_bounds(x_raw) if fit_mode else self.x_scale
         )
-        norm_x: np.ndarray = current_scale.scale_data(x_raw)
-        return norm_x, current_scale
+        return current_scale.scale_data(x_raw), current_scale
 
-    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> "ClassificationPipeline":
+    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> tuple["ClassificationPipeline", Sequence[float]]:
         x_proc, new_scale = self._prepare_x(x_raw, fit_mode=True)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
 
         weights: np.ndarray = self.solver.fit(x_mat, y_raw)
         new_net: ClassNet = self.net.with_weights(weights)
 
-        return ClassificationPipeline(
+        fitted_pipeline = ClassificationPipeline(
             self.feature_map, new_scale, self.solver, new_net, self.scale_x
         )
+
+        # evaluate static training loss (LLS calculates optimum directly in one epoch)
+        y_pred: np.ndarray = fitted_pipeline.predict(x_raw)
+        train_loss: float = ModelMetrics.hinge(y_raw, y_pred)
+
+        return fitted_pipeline, [train_loss]
+
+    def execute(
+        self,
+        config: Hyperparameters,
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+        x_val: np.ndarray,
+        y_val: np.ndarray
+    ) -> RunRecord:
+        pipeline: ClassificationPipeline = self.from_config(config)
+        fitted_pipeline, history = pipeline.fit(x_train, y_train)
+
+        stats: dict[str, float] = fitted_pipeline.evaluate(x_val, y_val)
+        primary_score: float = stats.get("accuracy", 0.0)
+
+        metrics: RunMetrics = RunMetrics(
+            primary_score=primary_score,
+            additional_stats=stats,
+            history={"loss": history}
+        )
+        return RunRecord(config=config, metrics=metrics, model=fitted_pipeline)
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)
@@ -85,18 +109,15 @@ class RegressionPipeline:
         self.net: RegNet = net or RegNet()
         self.scale_x: bool = scale_x
 
-    def with_config(
-        self,
-        feature_map: FeatureMap | None = None,
-        solver: AdamSolver | None = None,
-        scale_x: bool | None = None,
-    ) -> "RegressionPipeline":
-        new_map: FeatureMap = feature_map or self.feature_map
-        new_solver: AdamSolver = solver or self.solver
-        use_x_scale: bool = self.scale_x if scale_x is None else scale_x
-        return RegressionPipeline(
-            new_map, self.x_scale, self.y_scale, new_solver, self.net, use_x_scale
-        )
+    @classmethod
+    def from_config(cls, config: Hyperparameters) -> "RegressionPipeline":
+        basis_enum: BasisType = BasisType[config.basis.upper()]
+        feature_map = FeatureMap(degree=config.degree, basis=basis_enum)
+
+        optimiser = AdamOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
+        solver = AdamSolver(optimiser=optimiser, max_epochs=config.epochs)
+
+        return cls(feature_map=feature_map, solver=solver, scale_x=config.scale_x)
 
     def _prepare_x(
         self, x_raw: np.ndarray, fit_mode: bool = False
@@ -107,10 +128,9 @@ class RegressionPipeline:
         current_scale: DataScaler = (
             self.x_scale.fit_bounds(x_raw) if fit_mode else self.x_scale
         )
-        norm_x: np.ndarray = current_scale.scale_data(x_raw)
-        return norm_x, current_scale
+        return current_scale.scale_data(x_raw), current_scale
 
-    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> "RegressionPipeline":
+    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> tuple["RegressionPipeline", Sequence[float]]:
         x_proc, new_x_scale = self._prepare_x(x_raw, fit_mode=True)
 
         y_col: np.ndarray = y_raw.reshape(-1, 1)
@@ -118,9 +138,9 @@ class RegressionPipeline:
         y_norm: np.ndarray = new_y_scale.scale_data(y_col).flatten()
 
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-        new_net: RegNet = self.solver.fit(self.net, x_mat, y_norm)
+        new_net, history = self.solver.fit(self.net, x_mat, y_norm)
 
-        return RegressionPipeline(
+        fitted_pipeline = RegressionPipeline(
             self.feature_map,
             new_x_scale,
             new_y_scale,
@@ -128,6 +148,28 @@ class RegressionPipeline:
             new_net,
             self.scale_x,
         )
+
+        return fitted_pipeline, history
+
+    def execute(
+        self,
+        config: Hyperparameters,
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+        x_val: np.ndarray,
+        y_val: np.ndarray
+    ) -> RunRecord:
+        pipeline: RegressionPipeline = self.from_config(config)
+        fitted_pipeline, history = pipeline.fit(x_train, y_train)
+
+        mse_score: float = fitted_pipeline.evaluate(x_val, y_val)
+
+        metrics: RunMetrics = RunMetrics(
+            primary_score=mse_score,
+            additional_stats={"mse": mse_score},
+            history={"loss": history}
+        )
+        return RunRecord(config=config, metrics=metrics, model=fitted_pipeline)
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)

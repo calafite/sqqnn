@@ -20,7 +20,6 @@ class BaseNet:
 
     def predict(self, x_mat: np.ndarray) -> np.ndarray:
         beta_value: np.ndarray = self.compute_beta(x_mat)
-        # projection via nonlinear activation
         return np.cos(beta_value)
 
 
@@ -30,7 +29,6 @@ class ClassNet(BaseNet):
         return ClassNet(weights=w_arr)
 
     def predict(self, x_mat: np.ndarray) -> np.ndarray:
-        # returns tanh for classification
         beta_value: np.ndarray = self.compute_beta(x_mat)
         return np.tanh(beta_value)
 
@@ -74,7 +72,7 @@ class RegNet:
         )
         return ProjectionOperations.compute_output(state)
 
-    def compute_gradients(self, x_mat: np.ndarray, y_raw: np.ndarray) -> dict[str, Any]:
+    def compute_gradients(self, x_mat: np.ndarray, y_raw: np.ndarray) -> tuple[dict[str, Any], float]:
         alpha, beta, gamma = self._get_angles(x_mat)
         state: TrigState = ProjectionOperations.make_state(
             alpha, beta, gamma, self.theta, self.omega
@@ -83,12 +81,13 @@ class RegNet:
         y_line: np.ndarray = ProjectionOperations.compute_output(state)
         diff_value: np.ndarray = y_line - y_raw
 
+        mse_loss: float = float(np.mean(diff_value ** 2))
+
         da, db, dg, dt, dw = ProjectionOperations.compute_derivatives(state)
 
         n_samples: int = x_mat.shape[0]
         factor: float = 2.0 / n_samples
 
-        # chain rule components
         g_alpha: np.ndarray = factor * (diff_value * da) @ x_mat
         g_beta: np.ndarray = factor * (diff_value * db) @ x_mat
         g_gamma: np.ndarray = factor * (diff_value * dg) @ x_mat
@@ -96,10 +95,12 @@ class RegNet:
         g_theta: float = float(factor * np.sum(diff_value * dt))
         g_omega: float = float(factor * np.sum(diff_value * dw))
 
-        return {
+        gradients: dict[str, Any] = {
             "w_alpha": g_alpha,
             "w_beta": g_beta,
             "w_gamma": g_gamma,
             "theta": g_theta,
             "omega": g_omega,
         }
+
+        return gradients, mse_loss
