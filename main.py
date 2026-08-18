@@ -117,8 +117,8 @@ class Tester:
     def run_xor(self) -> None:
         x_data, y_data = Helpers.get_xor_data()
         configs = GridSearch.generate(
-            degree=[1, 2],
-            epochs=[300],
+            degree=[1],
+            epochs=[79],
             learning_rate=[0.05]
         )
 
@@ -137,8 +137,8 @@ class Tester:
     def run_sinc(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_sinc_data()
         configs = GridSearch.generate(
-            degree=[1, 2, 3],
-            epochs=[70000],
+            degree=[1],
+            epochs=[2000],
             learning_rate=[0.01, 0.001],
             scale_x=[False, True]
         )

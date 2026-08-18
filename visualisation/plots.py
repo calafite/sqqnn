@@ -30,6 +30,16 @@ class Visualiser:
         )
 
     @staticmethod
+    def _save_figure(title: str, folder: str = "data") -> None:
+        os.makedirs(folder, exist_ok=True)
+
+        clean_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "" for c in title)
+        filename = f"{clean_name.strip().lower().replace(' ', '_')}.png"
+        filepath = os.path.join(folder, filename)
+
+        plt.savefig(filepath, dpi=300, bbox_inches="tight")
+
+    @staticmethod
     def plot_convergence(
         record: RunRecord, metric_key: str = "loss", title: str = "Model Convergence"
     ) -> None:
@@ -55,6 +65,7 @@ class Visualiser:
         ax.set_ylabel(metric_key.capitalize())
 
         plt.tight_layout()
+        Visualiser._save_figure(title)
         plt.show()
 
     @staticmethod
@@ -102,6 +113,7 @@ class Visualiser:
         ax.set_ylabel("Primary Score")
 
         plt.tight_layout()
+        Visualiser._save_figure(title)
         plt.show()
 
     @staticmethod
@@ -140,4 +152,5 @@ class Visualiser:
         ax.set_ylabel("Feature 2")
 
         plt.tight_layout()
+        Visualiser._save_figure(title)
         plt.show()
