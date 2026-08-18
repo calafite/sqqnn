@@ -58,7 +58,7 @@ class Helpers:
 
         y_raw: np.ndarray = np.where(y_labels == 0, -1.0, 1.0)
 
-        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=67)
+        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=42)
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
         assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
@@ -181,7 +181,7 @@ class Tester:
         x_train, y_train, x_test, y_test = Helpers.get_wbcd_data()
         configs = GridSearch.generate(
             degree=[1, 2, 3, 4],
-            scale_x=[True]
+            scale_x=[True, False]
         )
 
         best_run, tracker = self._run_search(
@@ -208,7 +208,7 @@ class Tester:
             scale_x=[True]
         )
 
-        best_run, tracker = self._run_search(
+        _, tracker = self._run_search(
             title="DIGITS | MULTI-CLASS CLASSIFICATION",
             pipeline=ClassificationPipeline(),
             configs=configs,
@@ -218,6 +218,7 @@ class Tester:
             y_val=y_test,
             maximise=True
         )
+
         Visualiser.plot_hyperparameter_comparison(
             tracker.all_runs(), "degree", "Digits: Impact of Basis Degree"
         )

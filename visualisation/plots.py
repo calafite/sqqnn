@@ -30,7 +30,7 @@ class Visualiser:
         )
 
     @staticmethod
-    def _save_figure(title: str, folder: str = "data") -> None:
+    def _save_figure(title: str, folder: str = ".data") -> None:
         os.makedirs(folder, exist_ok=True)
 
         clean_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "" for c in title)
