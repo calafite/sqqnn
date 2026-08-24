@@ -1,6 +1,15 @@
 import uuid
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Protocol
+
+import numpy as np
+
+ConfigValue = str | int | float | bool
+
+
+class Model(Protocol):
+    def predict(self, x_raw: np.ndarray) -> np.ndarray: ...
 
 
 @dataclass(frozen=True)
@@ -13,8 +22,9 @@ class Hyperparameters:
     epochs: int = 100
     solver: str = "lls"
     scale_x: bool = False
+    n_estimators: int = 1
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, ConfigValue]:
         return {
             "degree": self.degree,
             "basis": self.basis,
@@ -24,6 +34,7 @@ class Hyperparameters:
             "epochs": self.epochs,
             "solver": self.solver,
             "scale_x": self.scale_x,
+            "n_estimators": self.n_estimators,
         }
 
 
@@ -38,5 +49,5 @@ class RunMetrics:
 class RunRecord:
     config: Hyperparameters
     metrics: RunMetrics
-    model: Any
+    model: Model
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])

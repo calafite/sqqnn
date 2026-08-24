@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
 import numpy as np
 from sklearn.datasets import load_breast_cancer, load_digits, make_moons
@@ -6,10 +7,22 @@ from sklearn.model_selection import train_test_split
 
 from tracking.records import Hyperparameters, RunRecord
 from tracking.tracker import ExperimentTracker
+from training.ensembles import ClassificationEnsemble
 from training.pipeline import ClassificationPipeline, RegressionPipeline
 from utils.search import GridSearch
 from utils.styling import OutputFormatter
 from visualisation.plots import Visualiser
+
+
+class PipelineRunner(Protocol):
+    def execute(
+        self,
+        config: Hyperparameters,
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+        x_val: np.ndarray,
+        y_val: np.ndarray,
+    ) -> RunRecord: ...
 
 
 class Helpers:
@@ -42,7 +55,9 @@ class Helpers:
 
         y_trans: np.ndarray = np.where(y_raw == 0, -1.0, 1.0)
 
-        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_trans, test_size=100, random_state=42)
+        x_tr, x_te, y_tr, y_te = train_test_split(
+            x_raw, y_trans, test_size=100, random_state=42
+        )
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
         assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
@@ -58,7 +73,9 @@ class Helpers:
 
         y_raw: np.ndarray = np.where(y_labels == 0, -1.0, 1.0)
 
-        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=42)
+        x_tr, x_te, y_tr, y_te = train_test_split(
+            x_raw, y_raw, test_size=0.2, random_state=42
+        )
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
         assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
@@ -72,7 +89,9 @@ class Helpers:
         assert isinstance(x_raw, np.ndarray)
         assert isinstance(y_raw, np.ndarray)
 
-        x_tr, x_te, y_tr, y_te = train_test_split(x_raw, y_raw, test_size=0.2, random_state=42)
+        x_tr, x_te, y_tr, y_te = train_test_split(
+            x_raw, y_raw, test_size=0.2, random_state=42
+        )
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
         assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
@@ -84,7 +103,7 @@ class Tester:
     def _run_search(
         self,
         title: str,
-        pipeline: Any,
+        pipeline: PipelineRunner,
         configs: Sequence[Hyperparameters],
         x_train: np.ndarray,
         y_train: np.ndarray,
@@ -109,18 +128,17 @@ class Tester:
             OutputFormatter.config("Best Learning Rate", best_run.config.learning_rate)
             OutputFormatter.config("Best Epochs", best_run.config.epochs)
 
+        if best_run.config.n_estimators > 1:
+            OutputFormatter.config("Best Estimators", best_run.config.n_estimators)
+
         OutputFormatter.metric("Primary Score", best_run.metrics.primary_score)
-        print("")
+        print()
 
         return best_run, tracker
 
     def run_xor(self) -> None:
         x_data, y_data = Helpers.get_xor_data()
-        configs = GridSearch.generate(
-            degree=[1],
-            epochs=[79],
-            learning_rate=[0.05]
-        )
+        configs = GridSearch.generate(degree=[1], epochs=[79], learning_rate=[0.05])
 
         best_run, _ = self._run_search(
             title="XOR GATE | REGRESSION",
@@ -130,7 +148,7 @@ class Tester:
             y_train=y_data,
             x_val=x_data,
             y_val=y_data,
-            maximise=False
+            maximise=False,
         )
         Visualiser.plot_convergence(best_run, title="XOR Convergence Over Time")
 
@@ -140,7 +158,7 @@ class Tester:
             degree=[1],
             epochs=[2000],
             learning_rate=[0.01, 0.001],
-            scale_x=[False, True]
+            scale_x=[False, True],
         )
 
         best_run, _ = self._run_search(
@@ -151,38 +169,38 @@ class Tester:
             y_train=y_train,
             x_val=x_test,
             y_val=y_test,
-            maximise=False
+            maximise=False,
         )
 
         Visualiser.plot_convergence(best_run, title="Sinc Convergence Over Time")
 
-    def run_moons(self) -> None:
+    def run_moons_ensemble(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_moons_data()
-        configs = GridSearch.generate(degree=[1, 2, 3, 4])
+        configs = GridSearch.generate(
+            degree=[3],
+            n_estimators=[1, 10, 20],
+        )
 
         best_run, tracker = self._run_search(
-            title="TWO MOONS | CLASSIFICATION",
-            pipeline=ClassificationPipeline(),
+            title="TWO MOONS | ENSEMBLE CLASSIFICATION",
+            pipeline=ClassificationEnsemble(config=configs[0]),
             configs=configs,
             x_train=x_train,
             y_train=y_train,
             x_val=x_test,
             y_val=y_test,
-            maximise=True
+            maximise=True,
         )
         Visualiser.plot_hyperparameter_comparison(
-            tracker.all_runs(), "degree", "Moons Dataset: Impact of Basis Degree"
+            tracker.all_runs(), "n_estimators", "Moons Dataset: Impact of Ensemble Size"
         )
         Visualiser.plot_decision_boundary(
-            best_run.model, x_test, y_test, title="Two Moons Decision Boundary"
+            best_run.model, x_test, y_test, title="Two Moons Ensemble Decision Boundary"
         )
 
     def run_wbcd(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_wbcd_data()
-        configs = GridSearch.generate(
-            degree=[1, 2, 3, 4],
-            scale_x=[True, False]
-        )
+        configs = GridSearch.generate(degree=[1, 2, 3, 4], scale_x=[True, False])
 
         best_run, tracker = self._run_search(
             title="WBCD | CLASSIFICATION",
@@ -192,7 +210,7 @@ class Tester:
             y_train=y_train,
             x_val=x_test,
             y_val=y_test,
-            maximise=True
+            maximise=True,
         )
         Visualiser.plot_hyperparameter_comparison(
             tracker.all_runs(), "degree", "WBCD: Impact of Basis Degree"
@@ -203,10 +221,7 @@ class Tester:
 
     def run_digits(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_digits_data()
-        configs = GridSearch.generate(
-            degree=[1, 2, 3],
-            scale_x=[True]
-        )
+        configs = GridSearch.generate(degree=[1, 2, 3], scale_x=[True])
 
         _, tracker = self._run_search(
             title="DIGITS | MULTI-CLASS CLASSIFICATION",
@@ -216,17 +231,17 @@ class Tester:
             y_train=y_train,
             x_val=x_test,
             y_val=y_test,
-            maximise=True
+            maximise=True,
         )
 
         Visualiser.plot_hyperparameter_comparison(
             tracker.all_runs(), "degree", "Digits: Impact of Basis Degree"
         )
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
+    def __call__(self) -> None:
         self.run_xor()
         self.run_sinc()
-        self.run_moons()
+        self.run_moons_ensemble()
         self.run_wbcd()
         self.run_digits()
 

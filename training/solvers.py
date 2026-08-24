@@ -1,9 +1,9 @@
-from typing import Any, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
 from core.network import RegNet
-from training.optimisers import AdamOptimiser, Optimiser
+from training.optimisers import AdamOptimiser, Optimiser, Parameter
 from utils.shared import SharedRNG
 
 
@@ -18,7 +18,7 @@ class LlsSolver:
 
         if self.l2_penalty == 0:
             x_pinv: np.ndarray = np.linalg.pinv(x_mat)
-            return x_pinv @ y_trans
+            return np.asarray(x_pinv @ y_trans)
 
         n_features: int = x_mat.shape[1]
         reg_matrix: np.ndarray = self.l2_penalty * np.eye(n_features)
@@ -54,34 +54,45 @@ class GradientSolver:
             gradients, loss = current_network.compute_gradients(x_mat, y_raw)
             history.append(loss)
 
-            parameters: dict[str, Any] = {
-                "w_alpha": current_network.w_alpha,
-                "w_beta": current_network.w_beta,
-                "w_gamma": current_network.w_gamma,
-                "theta": current_network.theta,
-                "omega": current_network.omega,
+            parameters: dict[str, Parameter] = {
+                "w_alpha": w_alpha,
+                "w_beta": w_beta,
+                "w_gamma": w_gamma,
+                "theta": theta,
+                "omega": omega,
             }
 
-            updated_parameters: dict[str, Any] = self.optimiser.update(
+            updated_parameters: dict[str, Parameter] = self.optimiser.update(
                 parameters, gradients
             )
 
-            current_network = current_network.with_parameters(
-                updated_parameters["w_alpha"],
-                updated_parameters["w_beta"],
-                updated_parameters["w_gamma"],
-                float(updated_parameters["theta"]),
-                float(updated_parameters["omega"]),
+            next_alpha = updated_parameters["w_alpha"]
+            next_beta = updated_parameters["w_beta"]
+            next_gamma = updated_parameters["w_gamma"]
+            assert isinstance(next_alpha, np.ndarray)
+            assert isinstance(next_beta, np.ndarray)
+            assert isinstance(next_gamma, np.ndarray)
+
+            w_alpha, w_beta, w_gamma = next_alpha, next_beta, next_gamma
+            theta = float(updated_parameters["theta"])
+            omega = float(updated_parameters["omega"])
+
+            current_network = network.with_parameters(
+                w_alpha, w_beta, w_gamma, theta, omega
             )
 
         return current_network, history
 
     @staticmethod
     def resolve_weights(weights: np.ndarray | None, n_features: int) -> np.ndarray:
-        rng: Any = SharedRNG.rng
-        return weights if weights is not None else rng.uniform(-np.pi, np.pi, size=n_features)
+        rng = SharedRNG.rng
+        return (
+            weights
+            if weights is not None
+            else np.asarray(rng.uniform(-np.pi, np.pi, size=n_features))
+        )
 
     @staticmethod
     def resolve_scalars(value: float) -> float:
-        rng: Any = SharedRNG.rng
+        rng = SharedRNG.rng
         return value if value != 0.0 else float(rng.uniform(-np.pi, np.pi))

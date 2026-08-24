@@ -1,12 +1,14 @@
-from typing import Any, Protocol
+from typing import Protocol
 
 import numpy as np
+
+Parameter = np.ndarray | float
 
 
 class Optimiser(Protocol):
     def update(
-        self, parameters: dict[str, Any], gradients: dict[str, Any]
-    ) -> dict[str, Any]: ...
+        self, parameters: dict[str, Parameter], gradients: dict[str, Parameter]
+    ) -> dict[str, Parameter]: ...
 
 
 class GradientDescentOptimiser:
@@ -15,17 +17,17 @@ class GradientDescentOptimiser:
         self.l2_penalty: float = l2_penalty
 
     def update(
-        self, parameters: dict[str, Any], gradients: dict[str, Any]
-    ) -> dict[str, Any]:
-        updated_parameters: dict[str, Any] = {}
+        self, parameters: dict[str, Parameter], gradients: dict[str, Parameter]
+    ) -> dict[str, Parameter]:
+        updated_parameters: dict[str, Parameter] = {}
 
         for key, parameter in parameters.items():
-            gradient: Any = gradients[key]
+            gradient: Parameter = gradients[key]
 
             if self.l2_penalty > 0.0:
                 gradient = gradient + self.l2_penalty * parameter
 
-            step_update: Any = self.learning_rate * gradient
+            step_update: Parameter = self.learning_rate * gradient
             updated_parameters[key] = parameter - step_update
 
         return updated_parameters
@@ -45,18 +47,18 @@ class AdamOptimiser:
         self.beta2: float = beta2
         self.epsilon: float = epsilon
         self.l2_penalty: float = l2_penalty
-        self.m_state: dict[str, Any] = {}
-        self.v_state: dict[str, Any] = {}
+        self.m_state: dict[str, Parameter] = {}
+        self.v_state: dict[str, Parameter] = {}
         self.time_step: int = 0
 
     def update(
-        self, parameters: dict[str, Any], gradients: dict[str, Any]
-    ) -> dict[str, Any]:
+        self, parameters: dict[str, Parameter], gradients: dict[str, Parameter]
+    ) -> dict[str, Parameter]:
         self.time_step += 1
-        updated_parameters: dict[str, Any] = {}
+        updated_parameters: dict[str, Parameter] = {}
 
         for key, parameter in parameters.items():
-            gradient: Any = gradients[key]
+            gradient: Parameter = gradients[key]
 
             if self.l2_penalty > 0.0:
                 gradient = gradient + self.l2_penalty * parameter
@@ -65,7 +67,7 @@ class AdamOptimiser:
                 self.m_state[key] = np.zeros_like(parameter)
                 self.v_state[key] = np.zeros_like(parameter)
 
-            updated_state: Any = (
+            updated_state: Parameter = (
                 self.beta1 * self.m_state[key] + (1.0 - self.beta1) * gradient
             )
             self.m_state[key] = updated_state
@@ -75,10 +77,10 @@ class AdamOptimiser:
             )
             self.v_state[key] = updated_state
 
-            m_line: Any = self.m_state[key] / (1.0 - self.beta1**self.time_step)
-            v_line: Any = self.v_state[key] / (1.0 - self.beta2**self.time_step)
+            m_line: Parameter = self.m_state[key] / (1.0 - self.beta1**self.time_step)
+            v_line: Parameter = self.v_state[key] / (1.0 - self.beta2**self.time_step)
 
-            step_update: Any = (
+            step_update: Parameter = (
                 self.learning_rate * m_line / (np.sqrt(v_line) + self.epsilon)
             )
             updated_parameters[key] = parameter - step_update
