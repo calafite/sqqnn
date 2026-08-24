@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence
+from collections.abc import Callable, Sequence
 
 from tracking.records import RunRecord
 
@@ -11,7 +11,7 @@ class ExperimentTracker:
     def log_run(self, record: RunRecord) -> None:
         self._records.append(record)
 
-    def get_best_run(self) -> Optional[RunRecord]:
+    def get_best_run(self) -> RunRecord | None:
         if not self._records:
             return None
 

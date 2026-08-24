@@ -1,8 +1,8 @@
-from typing import Any
-
 import numpy as np
 
 from core.projections import ProjectionOperations, TrigState
+
+Gradient = np.ndarray | float
 
 
 class BaseNet:
@@ -16,7 +16,7 @@ class BaseNet:
     def compute_beta(self, x_mat: np.ndarray) -> np.ndarray:
         if self.weights is None:
             raise ValueError("weights not set")
-        return x_mat @ self.weights
+        return np.asarray(x_mat @ self.weights)
 
     def predict(self, x_mat: np.ndarray) -> np.ndarray:
         beta_value: np.ndarray = self.compute_beta(x_mat)
@@ -50,9 +50,9 @@ class RegNet:
 
     @staticmethod
     def with_parameters(
-        w_alpha: np.ndarray | None,
-        w_beta: np.ndarray | None,
-        w_gamma: np.ndarray | None,
+        w_alpha: np.ndarray,
+        w_beta: np.ndarray,
+        w_gamma: np.ndarray,
         theta: float,
         omega: float,
     ) -> "RegNet":
@@ -72,7 +72,9 @@ class RegNet:
         )
         return ProjectionOperations.compute_output(state)
 
-    def compute_gradients(self, x_mat: np.ndarray, y_raw: np.ndarray) -> tuple[dict[str, Any], float]:
+    def compute_gradients(
+        self, x_mat: np.ndarray, y_raw: np.ndarray
+    ) -> tuple[dict[str, Gradient], float]:
         alpha, beta, gamma = self._get_angles(x_mat)
         state: TrigState = ProjectionOperations.make_state(
             alpha, beta, gamma, self.theta, self.omega
@@ -95,7 +97,7 @@ class RegNet:
         g_theta: float = float(factor * np.sum(diff_value * dt))
         g_omega: float = float(factor * np.sum(diff_value * dw))
 
-        gradients: dict[str, Any] = {
+        gradients: dict[str, Gradient] = {
             "w_alpha": g_alpha,
             "w_beta": g_beta,
             "w_gamma": g_gamma,

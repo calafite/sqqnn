@@ -33,4 +33,4 @@ class DataScaler:
 
         # maps back from target interval to unit interval
         norm_data: np.ndarray = (data + 1.0) / 2.0
-        return norm_data * value_range + self.minimum_value
+        return np.asarray(norm_data * value_range + self.minimum_value)

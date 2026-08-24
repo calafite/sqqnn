@@ -1,6 +1,3 @@
-from typing import Any
-
-
 class ColourCodes:
     reset: str = "\033[0m"
     bold: str = "\033[1m"
@@ -53,7 +50,7 @@ class ColouredString:
         return f"{prefix}{self.raw_text}{ColourCodes.reset}"
 
 
-def colourise(target: Any) -> ColouredString:
+def colourise(target: object) -> ColouredString:
     return ColouredString(str(target))
 
 
@@ -65,7 +62,7 @@ class OutputFormatter:
         print(f"\n{styled}")
 
     @staticmethod
-    def config(name: str, value: Any, indent: int = 12) -> None:
+    def config(name: str, value: object, indent: int = 12) -> None:
         pad_space: str = " " * indent
         key_str: ColouredString = colourise(name).white()
         val_str: ColouredString = colourise(str(value)).cyan()

@@ -1,5 +1,5 @@
 import os
-from typing import Any, Sequence
+from collections.abc import Sequence
 
 os.environ["GSK_RENDERER"] = "gl"
 
@@ -8,7 +8,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib.container import BarContainer
 
-from tracking.records import RunRecord
+from tracking.records import ConfigValue, Model, RunRecord
 
 
 class Visualiser:
@@ -55,7 +55,7 @@ class Visualiser:
             x_epochs = x_epochs[::step]
             history = history[::step]
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
 
         sns.lineplot(x=x_epochs, y=history, color="#2563EB", linewidth=2.5, ax=ax)
         ax.fill_between(x_epochs, history, color="#2563EB", alpha=0.1)
@@ -75,7 +75,7 @@ class Visualiser:
         if not records:
             return
 
-        x_values: list[Any] = []
+        x_values: list[ConfigValue] = []
         y_values: list[float] = []
 
         for record in records:
@@ -84,7 +84,7 @@ class Visualiser:
                 x_values.append(config_dict[param_name])
                 y_values.append(record.metrics.primary_score)
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
 
         sns.barplot(
             x=x_values,
@@ -118,7 +118,7 @@ class Visualiser:
 
     @staticmethod
     def plot_decision_boundary(
-        model: Any, x_data: np.ndarray, y_data: np.ndarray, title: str = "Decision Boundary"
+        model: Model, x_data: np.ndarray, y_data: np.ndarray, title: str = "Decision Boundary"
     ) -> None:
         x_min: float = float(x_data[:, 0].min()) - 0.5
         x_max: float = float(x_data[:, 0].max()) + 0.5
@@ -131,7 +131,7 @@ class Visualiser:
         predictions: np.ndarray = model.predict(mesh_points)
         zz: np.ndarray = np.where(predictions >= 0.0, 1.0, -1.0).reshape(xx.shape)
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
 
         ax.contourf(xx, yy, zz, alpha=0.4, cmap="RdBu_r")
 

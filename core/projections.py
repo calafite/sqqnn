@@ -63,7 +63,7 @@ class ProjectionOperations:
     def compute_output(s: TrigState) -> np.ndarray:
         # returns sum of grouped terms via dot product
         v_mat, w_vec = ProjectionOperations._get_vw(s)
-        return w_vec @ v_mat
+        return np.asarray(w_vec @ v_mat)
 
     @staticmethod
     def compute_derivatives(

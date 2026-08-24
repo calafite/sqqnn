@@ -1,16 +1,23 @@
 import itertools
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any, cast
 
-from tracking.records import Hyperparameters
+from tracking.records import ConfigValue, Hyperparameters
+
 
 class GridSearch:
     @staticmethod
-    def generate(**kwargs: Any) -> Sequence[Hyperparameters]:
+    def generate(**kwargs: Sequence[ConfigValue] | ConfigValue) -> list[Hyperparameters]:
         keys: list[str] = list(kwargs.keys())
 
-        values: list[Any] = [
-            value if isinstance(value, (list, tuple)) else [value] for value in kwargs.values()
+        values: list[Sequence[ConfigValue]] = [
+            list(value) if isinstance(value, Sequence) and not isinstance(value, str) else [value]
+            for value in kwargs.values()
         ]
 
         combinations = itertools.product(*values)
-        return [Hyperparameters(**dict(zip(keys, combo))) for combo in combinations]
+        combos = cast(
+            "list[dict[str, Any]]",
+            [dict(zip(keys, combo)) for combo in combinations],
+        )
+        return [Hyperparameters(**combo) for combo in combos]

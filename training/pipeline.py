@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -29,11 +29,18 @@ class ClassificationPipeline:
         self.classes: np.ndarray | None = classes
 
     @classmethod
-    def from_config(cls, config: Hyperparameters) -> "ClassificationPipeline":
+    def from_config(
+        cls, config: Hyperparameters, classes: np.ndarray | None = None
+    ) -> "ClassificationPipeline":
         basis_enum: BasisType = BasisType[config.basis.upper()]
         feature_map = FeatureMap(degree=config.degree, basis=basis_enum)
         solver = LlsSolver(l2_penalty=config.l2_penalty)
-        return cls(feature_map=feature_map, solver=solver, scale_x=config.scale_x)
+        return cls(
+            feature_map=feature_map,
+            solver=solver,
+            scale_x=config.scale_x,
+            classes=classes,
+        )
 
     def _prepare_x(
         self, x_raw: np.ndarray, fit_mode: bool = False
@@ -46,11 +53,15 @@ class ClassificationPipeline:
         )
         return current_scale.scale_data(x_raw), current_scale
 
-    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> tuple["ClassificationPipeline", Sequence[float]]:
+    def fit(
+        self, x_raw: np.ndarray, y_raw: np.ndarray
+    ) -> tuple["ClassificationPipeline", Sequence[float]]:
         x_proc, new_scale = self._prepare_x(x_raw, fit_mode=True)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
 
-        unique_classes = np.unique(y_raw)
+        unique_classes = (
+            self.classes if self.classes is not None else np.unique(y_raw)
+        )
 
         if len(unique_classes) > 2:
             n_samples, n_classes = len(y_raw), len(unique_classes)
@@ -69,7 +80,7 @@ class ClassificationPipeline:
             solver=self.solver,
             net=new_net,
             scale_x=self.scale_x,
-            classes=unique_classes
+            classes=unique_classes,
         )
 
         train_loss: float = ModelMetrics.hinge(y_encoded, new_net.predict(x_mat))
@@ -81,7 +92,7 @@ class ClassificationPipeline:
         x_train: np.ndarray,
         y_train: np.ndarray,
         x_val: np.ndarray,
-        y_val: np.ndarray
+        y_val: np.ndarray,
     ) -> RunRecord:
         pipeline: ClassificationPipeline = self.from_config(config)
         fitted_pipeline, history = pipeline.fit(x_train, y_train)
@@ -92,14 +103,17 @@ class ClassificationPipeline:
         metrics: RunMetrics = RunMetrics(
             primary_score=primary_score,
             additional_stats=stats,
-            history={"loss": history}
+            history={"loss": history},
         )
         return RunRecord(config=config, metrics=metrics, model=fitted_pipeline)
 
-    def predict(self, x_raw: np.ndarray) -> np.ndarray:
+    def decision_function(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-        raw_pred = self.net.predict(x_mat)
+        return self.net.predict(x_mat)
+
+    def predict(self, x_raw: np.ndarray) -> np.ndarray:
+        raw_pred: np.ndarray = self.decision_function(x_raw)
 
         if self.classes is not None and len(self.classes) > 2:
             class_indices = np.argmax(raw_pred, axis=1)
@@ -137,9 +151,13 @@ class RegressionPipeline:
 
         optimiser: Optimiser
         if config.optimiser.lower() == "adam":
-            optimiser = AdamOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
+            optimiser = AdamOptimiser(
+                learning_rate=config.learning_rate, l2_penalty=config.l2_penalty
+            )
         else:
-            optimiser = GradientDescentOptimiser(learning_rate=config.learning_rate, l2_penalty=config.l2_penalty)
+            optimiser = GradientDescentOptimiser(
+                learning_rate=config.learning_rate, l2_penalty=config.l2_penalty
+            )
 
         solver = GradientSolver(optimiser=optimiser, max_epochs=config.epochs)
 
@@ -156,7 +174,9 @@ class RegressionPipeline:
         )
         return current_scale.scale_data(x_raw), current_scale
 
-    def fit(self, x_raw: np.ndarray, y_raw: np.ndarray) -> tuple["RegressionPipeline", Sequence[float]]:
+    def fit(
+        self, x_raw: np.ndarray, y_raw: np.ndarray
+    ) -> tuple["RegressionPipeline", Sequence[float]]:
         x_proc, new_x_scale = self._prepare_x(x_raw, fit_mode=True)
 
         y_col: np.ndarray = y_raw.reshape(-1, 1)
@@ -183,7 +203,7 @@ class RegressionPipeline:
         x_train: np.ndarray,
         y_train: np.ndarray,
         x_val: np.ndarray,
-        y_val: np.ndarray
+        y_val: np.ndarray,
     ) -> RunRecord:
         pipeline: RegressionPipeline = self.from_config(config)
         fitted_pipeline, history = pipeline.fit(x_train, y_train)
@@ -193,7 +213,7 @@ class RegressionPipeline:
         metrics: RunMetrics = RunMetrics(
             primary_score=mse_score,
             additional_stats={"mse": mse_score},
-            history={"loss": history}
+            history={"loss": history},
         )
         return RunRecord(config=config, metrics=metrics, model=fitted_pipeline)
 
