@@ -47,7 +47,7 @@ class Helpers:
 
     @staticmethod
     def get_moons_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        x_raw, y_raw = make_moons(n_samples=500, noise=0.25, random_state=3)
+        x_raw, y_raw = make_moons(n_samples=1100, noise=0.07, random_state=3)
 
         assert isinstance(x_raw, np.ndarray)
         assert isinstance(y_raw, np.ndarray)
@@ -55,7 +55,41 @@ class Helpers:
         y_trans: np.ndarray = np.where(y_raw == 0, -1.0, 1.0)
 
         x_tr, x_te, y_tr, y_te = train_test_split(
-            x_raw, y_trans, train_size=30, test_size=470, random_state=42
+            x_raw, y_trans, test_size=100, random_state=42
+        )
+
+        assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
+        assert isinstance(y_tr, np.ndarray) and isinstance(y_te, np.ndarray)
+
+        return x_tr, y_tr, x_te, y_te
+
+    @staticmethod
+    def get_spirals_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        n_samples: int = 800
+        noise: float = 0.6
+
+        theta1: np.ndarray = np.linspace(0, 3 * np.pi, n_samples // 2)
+        x1: np.ndarray = np.column_stack(
+            (theta1 * np.cos(theta1), theta1 * np.sin(theta1))
+        )
+        y1: np.ndarray = np.ones(n_samples // 2)
+
+        theta2: np.ndarray = np.linspace(0, 3 * np.pi, n_samples // 2)
+        x2: np.ndarray = np.column_stack(
+            (-theta2 * np.cos(theta2), -theta2 * np.sin(theta2))
+        )
+        y2: np.ndarray = -np.ones(n_samples // 2)
+
+        x_raw: np.ndarray = np.vstack((x1, x2))
+        x_raw += np.random.default_rng(42).normal(scale=noise, size=x_raw.shape)
+
+        y_raw: np.ndarray = np.concatenate((y1, y2))
+
+        assert isinstance(x_raw, np.ndarray)
+        assert isinstance(y_raw, np.ndarray)
+
+        x_tr, x_te, y_tr, y_te = train_test_split(
+            x_raw, y_raw, test_size=0.2, random_state=42
         )
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
@@ -177,13 +211,16 @@ class Tester:
 
         Visualiser.plot_convergence(best_run, title="Sinc Convergence Over Time")
 
-    def run_moons(self) -> None:
-        x_train, y_train, x_test, y_test = Helpers.get_moons_data()
+    def run_spirals(self) -> None:
+        x_train, y_train, x_test, y_test = Helpers.get_spirals_data()
 
-        configs = GridSearch.generate(degree=[1, 2, 4, 8, 16], basis=["fourier"])
+        # Pit standard polynomials against Fourier frequencies to prove topological mapping advantage
+        configs = GridSearch.generate(
+            degree=[4, 8, 12], basis=["standard", "fourier"], scale_x=[True]
+        )
 
         best_run, _ = self._run_search(
-            title="TWO MOONS | BASIS DEGREE",
+            title="TWO SPIRALS | BASIS MAPPING",
             pipeline=ClassificationPipeline(),
             configs=configs,
             x_train=x_train,
@@ -191,6 +228,31 @@ class Tester:
             x_val=x_test,
             y_val=y_test,
             maximise=True,
+        )
+        Visualiser.plot_decision_boundary(
+            best_run.model,
+            x_test,
+            y_test,
+            title=f"Spirals: {best_run.config.basis.title()} Basis Boundary",
+        )
+
+    def run_moons(self) -> None:
+        x_train, y_train, x_test, y_test = Helpers.get_moons_data()
+
+        configs = GridSearch.generate(degree=[1, 2, 3, 4])
+
+        best_run, tracker = self._run_search(
+            title="TWO MOONS | CLASSIFICATION",
+            pipeline=ClassificationPipeline(),
+            configs=configs,
+            x_train=x_train,
+            y_train=y_train,
+            x_val=x_test,
+            y_val=y_test,
+            maximise=True,
+        )
+        Visualiser.plot_hyperparameter_comparison(
+            tracker.all_runs(), "degree", "Moons Dataset: Impact of Basis Degree"
         )
         Visualiser.plot_decision_boundary(
             best_run.model, x_test, y_test, title="Two Moons Decision Boundary"
@@ -239,6 +301,7 @@ class Tester:
     def __call__(self) -> None:
         self.run_xor()
         self.run_sinc()
+        self.run_spirals()
         self.run_moons()
         self.run_wbcd()
         self.run_digits()

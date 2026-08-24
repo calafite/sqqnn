@@ -22,7 +22,9 @@ class ExperimentTracker:
         )
         return sorted_records[0]
 
-    def filter_runs(self, predicate: Callable[[RunRecord], bool]) -> Sequence[RunRecord]:
+    def filter_runs(
+        self, predicate: Callable[[RunRecord], bool]
+    ) -> Sequence[RunRecord]:
         return [record for record in self._records if predicate(record)]
 
     def all_runs(self) -> Sequence[RunRecord]:

@@ -83,7 +83,7 @@ class RegNet:
         y_line: np.ndarray = ProjectionOperations.compute_output(state)
         diff_value: np.ndarray = y_line - y_raw
 
-        mse_loss: float = float(np.mean(diff_value ** 2))
+        mse_loss: float = float(np.mean(diff_value**2))
 
         da, db, dg, dt, dw = ProjectionOperations.compute_derivatives(state)
 

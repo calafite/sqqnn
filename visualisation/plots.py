@@ -33,7 +33,9 @@ class Visualiser:
     def _save_figure(title: str, folder: str = ".data") -> None:
         os.makedirs(folder, exist_ok=True)
 
-        clean_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "" for c in title)
+        clean_name = "".join(
+            c if c.isalnum() or c in (" ", "_", "-") else "" for c in title
+        )
         filename = f"{clean_name.strip().lower().replace(' ', '_')}.png"
         filepath = os.path.join(folder, filename)
 
@@ -70,7 +72,9 @@ class Visualiser:
 
     @staticmethod
     def plot_hyperparameter_comparison(
-        records: Sequence[RunRecord], param_name: str, title: str = "Hyperparameter Search"
+        records: Sequence[RunRecord],
+        param_name: str,
+        title: str = "Hyperparameter Search",
     ) -> None:
         if not records:
             return
@@ -118,14 +122,19 @@ class Visualiser:
 
     @staticmethod
     def plot_decision_boundary(
-        model: Model, x_data: np.ndarray, y_data: np.ndarray, title: str = "Decision Boundary"
+        model: Model,
+        x_data: np.ndarray,
+        y_data: np.ndarray,
+        title: str = "Decision Boundary",
     ) -> None:
         x_min: float = float(x_data[:, 0].min()) - 0.5
         x_max: float = float(x_data[:, 0].max()) + 0.5
         y_min: float = float(x_data[:, 1].min()) - 0.5
         y_max: float = float(x_data[:, 1].max()) + 0.5
 
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
+        xx, yy = np.meshgrid(
+            np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01)
+        )
         mesh_points: np.ndarray = np.c_[xx.ravel(), yy.ravel()]
 
         predictions: np.ndarray = model.predict(mesh_points)

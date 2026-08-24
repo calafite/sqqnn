@@ -10,9 +10,7 @@ class BasisType(enum.Enum):
 
 
 class FeatureMap:
-    def __init__(
-        self, degree: int = 1, basis: BasisType = BasisType.STANDARD
-    ) -> None:
+    def __init__(self, degree: int = 1, basis: BasisType = BasisType.STANDARD) -> None:
         self.degree: int = degree
         self.basis: BasisType = basis
 

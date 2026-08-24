@@ -35,7 +35,9 @@ class GradientSolver:
         self.optimiser: Optimiser = optimiser or AdamOptimiser()
         self.max_epochs: int = max_epochs
 
-    def fit(self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray) -> tuple[RegNet, Sequence[float]]:
+    def fit(
+        self, network: RegNet, x_mat: np.ndarray, y_raw: np.ndarray
+    ) -> tuple[RegNet, Sequence[float]]:
         n_features: int = x_mat.shape[1]
 
         w_alpha: np.ndarray = self.resolve_weights(network.w_alpha, n_features)

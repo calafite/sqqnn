@@ -59,9 +59,7 @@ class ClassificationPipeline:
         x_proc, new_scale = self._prepare_x(x_raw, fit_mode=True)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
 
-        unique_classes = (
-            self.classes if self.classes is not None else np.unique(y_raw)
-        )
+        unique_classes = self.classes if self.classes is not None else np.unique(y_raw)
 
         if len(unique_classes) > 2:
             n_samples, n_classes = len(y_raw), len(unique_classes)
