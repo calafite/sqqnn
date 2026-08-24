@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 
 from tracking.records import Hyperparameters, RunRecord
 from tracking.tracker import ExperimentTracker
-from training.ensembles import ClassificationEnsemble
 from training.pipeline import ClassificationPipeline, RegressionPipeline
 from utils.search import GridSearch
 from utils.styling import OutputFormatter
@@ -110,27 +109,16 @@ class Tester:
         x_val: np.ndarray,
         y_val: np.ndarray,
         maximise: bool,
-        ensemble_pipeline: PipelineRunner | None = None,
     ) -> tuple[RunRecord, ExperimentTracker]:
         OutputFormatter.title(title)
         tracker = ExperimentTracker(maximise_metric=maximise)
 
         for config in configs:
-            if config.use_ensemble and ensemble_pipeline is not None:
-                record = ensemble_pipeline.execute(
-                    config, x_train, y_train, x_val, y_val
-                )
-            else:
-                record = pipeline.execute(config, x_train, y_train, x_val, y_val)
+            record: RunRecord = pipeline.execute(config, x_train, y_train, x_val, y_val)
             tracker.log_run(record)
 
-            mode_str = (
-                f"True, FF={config.feature_fraction:.2f}"
-                if config.use_ensemble
-                else "False"
-            )
             OutputFormatter.metric(
-                f"Run [Ensemble={mode_str}]",
+                f"Run [{config.basis.title()} (K={config.degree})]",
                 record.metrics.primary_score,
                 indent=12,
             )
@@ -145,13 +133,7 @@ class Tester:
             OutputFormatter.config("Best Learning Rate", best_run.config.learning_rate)
             OutputFormatter.config("Best Epochs", best_run.config.epochs)
 
-        OutputFormatter.config("Used Ensemble", best_run.config.use_ensemble)
-        if best_run.config.use_ensemble:
-            OutputFormatter.config("Best Estimators", best_run.config.n_estimators)
-            OutputFormatter.config(
-                "Feature Fraction", best_run.config.feature_fraction
-            )
-
+        OutputFormatter.config("Best Basis", best_run.config.basis.title())
         OutputFormatter.metric("Primary Score", best_run.metrics.primary_score)
         print()
 
@@ -198,19 +180,10 @@ class Tester:
     def run_moons(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_moons_data()
 
-        # Explicitly demonstrating the mathematical power of Random Subspaces
-        configs = [
-            Hyperparameters(degree=15, basis="fourier", use_ensemble=False),
-            Hyperparameters(
-                degree=15, basis="fourier", use_ensemble=True, n_estimators=25, feature_fraction=1.0
-            ),
-            Hyperparameters(
-                degree=15, basis="fourier", use_ensemble=True, n_estimators=25, feature_fraction=0.15
-            ),
-        ]
+        configs = GridSearch.generate(degree=[1, 2, 4, 8, 16], basis=["fourier"])
 
         best_run, _ = self._run_search(
-            title="TWO MOONS | RANDOM SUBSPACES",
+            title="TWO MOONS | BASIS DEGREE",
             pipeline=ClassificationPipeline(),
             configs=configs,
             x_train=x_train,
@@ -218,10 +191,9 @@ class Tester:
             x_val=x_test,
             y_val=y_test,
             maximise=True,
-            ensemble_pipeline=ClassificationEnsemble(config=Hyperparameters()),
         )
         Visualiser.plot_decision_boundary(
-            best_run.model, x_test, y_test, title="Two Moons Ensemble Decision Boundary"
+            best_run.model, x_test, y_test, title="Two Moons Decision Boundary"
         )
 
     def run_wbcd(self) -> None:

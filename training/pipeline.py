@@ -20,7 +20,6 @@ class ClassificationPipeline:
         net: ClassNet | None = None,
         scale_x: bool = True,
         classes: np.ndarray | None = None,
-        feature_mask: np.ndarray | None = None,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
@@ -28,7 +27,6 @@ class ClassificationPipeline:
         self.net: ClassNet = net or ClassNet()
         self.scale_x: bool = scale_x
         self.classes: np.ndarray | None = classes
-        self.feature_mask: np.ndarray | None = feature_mask
 
     @classmethod
     def from_config(
@@ -61,9 +59,6 @@ class ClassificationPipeline:
         x_proc, new_scale = self._prepare_x(x_raw, fit_mode=True)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
 
-        if self.feature_mask is not None:
-            x_mat = x_mat[:, self.feature_mask]
-
         unique_classes = (
             self.classes if self.classes is not None else np.unique(y_raw)
         )
@@ -86,7 +81,6 @@ class ClassificationPipeline:
             net=new_net,
             scale_x=self.scale_x,
             classes=unique_classes,
-            feature_mask=self.feature_mask,
         )
 
         train_loss: float = ModelMetrics.hinge(y_encoded, new_net.predict(x_mat))
@@ -116,9 +110,6 @@ class ClassificationPipeline:
     def decision_function(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-
-        if self.feature_mask is not None:
-            x_mat = x_mat[:, self.feature_mask]
         return self.net.predict(x_mat)
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
@@ -145,7 +136,6 @@ class RegressionPipeline:
         solver: GradientSolver | None = None,
         net: RegNet | None = None,
         scale_x: bool = False,
-        feature_mask: np.ndarray | None = None,
     ) -> None:
         self.feature_map: FeatureMap = feature_map or FeatureMap(degree=1)
         self.x_scale: DataScaler = x_scale or DataScaler()
@@ -153,7 +143,6 @@ class RegressionPipeline:
         self.solver: GradientSolver = solver or GradientSolver()
         self.net: RegNet = net or RegNet()
         self.scale_x: bool = scale_x
-        self.feature_mask: np.ndarray | None = feature_mask
 
     @classmethod
     def from_config(cls, config: Hyperparameters) -> "RegressionPipeline":
@@ -195,8 +184,6 @@ class RegressionPipeline:
         y_norm: np.ndarray = new_y_scale.scale_data(y_col).flatten()
 
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-        if self.feature_mask is not None:
-            x_mat = x_mat[:, self.feature_mask]
 
         new_net, history = self.solver.fit(self.net, x_mat, y_norm)
 
@@ -207,7 +194,6 @@ class RegressionPipeline:
             self.solver,
             new_net,
             self.scale_x,
-            self.feature_mask,
         )
 
         return fitted_pipeline, history
@@ -235,9 +221,6 @@ class RegressionPipeline:
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         x_proc, _ = self._prepare_x(x_raw, fit_mode=False)
         x_mat: np.ndarray = self.feature_map.build_matrix(x_proc)
-
-        if self.feature_mask is not None:
-            x_mat = x_mat[:, self.feature_mask]
 
         y_norm: np.ndarray = self.net.predict(x_mat)
         y_col: np.ndarray = y_norm.reshape(-1, 1)

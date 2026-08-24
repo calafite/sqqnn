@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 
@@ -22,11 +22,8 @@ class Hyperparameters:
     epochs: int = 100
     solver: str = "lls"
     scale_x: bool = False
-    use_ensemble: bool = False
-    n_estimators: int = 1
-    feature_fraction: float = 1.0
 
-    def to_dict(self) -> dict[str, ConfigValue]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "degree": self.degree,
             "basis": self.basis,
@@ -36,9 +33,6 @@ class Hyperparameters:
             "epochs": self.epochs,
             "solver": self.solver,
             "scale_x": self.scale_x,
-            "use_ensemble": self.use_ensemble,
-            "n_estimators": self.n_estimators,
-            "feature_fraction": self.feature_fraction,
         }
 
 
