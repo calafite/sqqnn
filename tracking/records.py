@@ -24,6 +24,7 @@ class Hyperparameters:
     scale_x: bool = False
     use_ensemble: bool = False
     n_estimators: int = 1
+    feature_fraction: float = 1.0
 
     def to_dict(self) -> dict[str, ConfigValue]:
         return {
@@ -37,6 +38,7 @@ class Hyperparameters:
             "scale_x": self.scale_x,
             "use_ensemble": self.use_ensemble,
             "n_estimators": self.n_estimators,
+            "feature_fraction": self.feature_fraction,
         }
 
 

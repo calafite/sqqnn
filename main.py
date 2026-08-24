@@ -124,7 +124,16 @@ class Tester:
                 record = pipeline.execute(config, x_train, y_train, x_val, y_val)
             tracker.log_run(record)
 
-            OutputFormatter.metric(f"Run [Ensemble={config.use_ensemble}]", record.metrics.primary_score, indent=12)
+            mode_str = (
+                f"True, FF={config.feature_fraction:.2f}"
+                if config.use_ensemble
+                else "False"
+            )
+            OutputFormatter.metric(
+                f"Run [Ensemble={mode_str}]",
+                record.metrics.primary_score,
+                indent=12,
+            )
 
         best_run: RunRecord | None = tracker.get_best_run()
         if best_run is None:
@@ -139,6 +148,9 @@ class Tester:
         OutputFormatter.config("Used Ensemble", best_run.config.use_ensemble)
         if best_run.config.use_ensemble:
             OutputFormatter.config("Best Estimators", best_run.config.n_estimators)
+            OutputFormatter.config(
+                "Feature Fraction", best_run.config.feature_fraction
+            )
 
         OutputFormatter.metric("Primary Score", best_run.metrics.primary_score)
         print()
@@ -185,12 +197,20 @@ class Tester:
 
     def run_moons(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_moons_data()
-        configs = GridSearch.generate(
-            degree=[5], use_ensemble=[False, True], n_estimators=[25]
-        )
 
-        best_run, tracker = self._run_search(
-            title="TWO MOONS | SINGLE VS ENSEMBLE",
+        # Explicitly demonstrating the mathematical power of Random Subspaces
+        configs = [
+            Hyperparameters(degree=15, basis="fourier", use_ensemble=False),
+            Hyperparameters(
+                degree=15, basis="fourier", use_ensemble=True, n_estimators=25, feature_fraction=1.0
+            ),
+            Hyperparameters(
+                degree=15, basis="fourier", use_ensemble=True, n_estimators=25, feature_fraction=0.15
+            ),
+        ]
+
+        best_run, _ = self._run_search(
+            title="TWO MOONS | RANDOM SUBSPACES",
             pipeline=ClassificationPipeline(),
             configs=configs,
             x_train=x_train,
@@ -199,9 +219,6 @@ class Tester:
             y_val=y_test,
             maximise=True,
             ensemble_pipeline=ClassificationEnsemble(config=Hyperparameters()),
-        )
-        Visualiser.plot_hyperparameter_comparison(
-            tracker.all_runs(), "use_ensemble", "Moons Dataset: Impact of Ensembling"
         )
         Visualiser.plot_decision_boundary(
             best_run.model, x_test, y_test, title="Two Moons Ensemble Decision Boundary"

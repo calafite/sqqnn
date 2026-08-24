@@ -2,6 +2,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
+from data.features import BasisType, FeatureMap
 from tracking.records import Hyperparameters, RunMetrics, RunRecord
 from training.pipeline import ClassificationPipeline, RegressionPipeline
 from utils.metrics import ModelMetrics
@@ -27,8 +28,13 @@ class ClassificationEnsemble:
         self, x_raw: np.ndarray, y_raw: np.ndarray
     ) -> tuple["ClassificationEnsemble", Sequence[float]]:
         n_samples: int = x_raw.shape[0]
+        n_cols: int = x_raw.shape[1]
         rng = SharedRNG.rng
         unique_classes: np.ndarray = np.unique(y_raw)
+
+        dummy_map = FeatureMap.with_config(self.config.degree, BasisType[self.config.basis.upper()])
+        n_features_expanded = dummy_map.build_matrix(np.zeros((1, n_cols))).shape[1]
+        n_sub_features = max(1, int(n_features_expanded * self.config.feature_fraction))
 
         fitted_pipelines: list[ClassificationPipeline] = []
 
@@ -40,6 +46,14 @@ class ClassificationEnsemble:
             pipeline: ClassificationPipeline = ClassificationPipeline.from_config(
                 self.config, classes=unique_classes
             )
+
+            if self.config.feature_fraction < 1.0 and n_features_expanded > 1:
+                n_to_sample = max(0, n_sub_features - 1)
+                available = np.arange(1, n_features_expanded)
+                sampled = rng.choice(available, size=n_to_sample, replace=False)
+                # Always retain the bias intercept (index 0)
+                pipeline.feature_mask = np.concatenate((np.array([0]), sampled)).astype(int)
+
             fitted_pipeline, _ = pipeline.fit(x_boot, y_boot)
             fitted_pipelines.append(fitted_pipeline)
 
@@ -126,7 +140,12 @@ class RegressionEnsemble:
         self, x_raw: np.ndarray, y_raw: np.ndarray
     ) -> tuple["RegressionEnsemble", Sequence[float]]:
         n_samples: int = x_raw.shape[0]
+        n_cols: int = x_raw.shape[1]
         rng = SharedRNG.rng
+
+        dummy_map = FeatureMap.with_config(self.config.degree, BasisType[self.config.basis.upper()])
+        n_features_expanded = dummy_map.build_matrix(np.zeros((1, n_cols))).shape[1]
+        n_sub_features = max(1, int(n_features_expanded * self.config.feature_fraction))
 
         fitted_pipelines: list[RegressionPipeline] = []
         ensemble_history: list[float] = []
@@ -137,6 +156,13 @@ class RegressionEnsemble:
             y_boot: np.ndarray = y_raw[indices]
 
             pipeline: RegressionPipeline = RegressionPipeline.from_config(self.config)
+
+            if self.config.feature_fraction < 1.0 and n_features_expanded > 1:
+                n_to_sample = max(0, n_sub_features - 1)
+                available = np.arange(1, n_features_expanded)
+                sampled = rng.choice(available, size=n_to_sample, replace=False)
+                pipeline.feature_mask = np.concatenate((np.array([0]), sampled)).astype(int)
+
             fitted_pipeline, history = pipeline.fit(x_boot, y_boot)
             fitted_pipelines.append(fitted_pipeline)
 
