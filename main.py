@@ -48,7 +48,8 @@ class Helpers:
 
     @staticmethod
     def get_moons_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        x_raw, y_raw = make_moons(n_samples=1100, noise=0.07, random_state=3)
+        # Increased noise to stress-test the model's variance
+        x_raw, y_raw = make_moons(n_samples=1100, noise=0.25, random_state=3)
 
         assert isinstance(x_raw, np.ndarray)
         assert isinstance(y_raw, np.ndarray)
@@ -110,12 +111,16 @@ class Tester:
         x_val: np.ndarray,
         y_val: np.ndarray,
         maximise: bool,
+        ensemble_pipeline: PipelineRunner | None = None,
     ) -> tuple[RunRecord, ExperimentTracker]:
         OutputFormatter.title(title)
         tracker = ExperimentTracker(maximise_metric=maximise)
 
         for config in configs:
-            record: RunRecord = pipeline.execute(config, x_train, y_train, x_val, y_val)
+            if config.use_ensemble and ensemble_pipeline is not None:
+                record = ensemble_pipeline.execute(config, x_train, y_train, x_val, y_val)
+            else:
+                record = pipeline.execute(config, x_train, y_train, x_val, y_val)
             tracker.log_run(record)
 
         best_run: RunRecord | None = tracker.get_best_run()
@@ -128,7 +133,8 @@ class Tester:
             OutputFormatter.config("Best Learning Rate", best_run.config.learning_rate)
             OutputFormatter.config("Best Epochs", best_run.config.epochs)
 
-        if best_run.config.n_estimators > 1:
+        OutputFormatter.config("Used Ensemble", best_run.config.use_ensemble)
+        if best_run.config.use_ensemble:
             OutputFormatter.config("Best Estimators", best_run.config.n_estimators)
 
         OutputFormatter.metric("Primary Score", best_run.metrics.primary_score)
@@ -174,25 +180,27 @@ class Tester:
 
         Visualiser.plot_convergence(best_run, title="Sinc Convergence Over Time")
 
-    def run_moons_ensemble(self) -> None:
+    def run_moons(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_moons_data()
         configs = GridSearch.generate(
             degree=[3],
-            n_estimators=[1, 10, 20],
+            use_ensemble=[False, True],
+            n_estimators=[15]
         )
 
         best_run, tracker = self._run_search(
-            title="TWO MOONS | ENSEMBLE CLASSIFICATION",
-            pipeline=ClassificationEnsemble(config=configs[0]),
+            title="TWO MOONS | SINGLE VS ENSEMBLE",
+            pipeline=ClassificationPipeline(),
             configs=configs,
             x_train=x_train,
             y_train=y_train,
             x_val=x_test,
             y_val=y_test,
             maximise=True,
+            ensemble_pipeline=ClassificationEnsemble(config=Hyperparameters())
         )
         Visualiser.plot_hyperparameter_comparison(
-            tracker.all_runs(), "n_estimators", "Moons Dataset: Impact of Ensemble Size"
+            tracker.all_runs(), "use_ensemble", "Moons Dataset: Impact of Ensembling"
         )
         Visualiser.plot_decision_boundary(
             best_run.model, x_test, y_test, title="Two Moons Ensemble Decision Boundary"
@@ -241,7 +249,7 @@ class Tester:
     def __call__(self) -> None:
         self.run_xor()
         self.run_sinc()
-        self.run_moons_ensemble()
+        self.run_moons()
         self.run_wbcd()
         self.run_digits()
 

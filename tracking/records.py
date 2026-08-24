@@ -22,6 +22,7 @@ class Hyperparameters:
     epochs: int = 100
     solver: str = "lls"
     scale_x: bool = False
+    use_ensemble: bool = False
     n_estimators: int = 1
 
     def to_dict(self) -> dict[str, ConfigValue]:
@@ -34,6 +35,7 @@ class Hyperparameters:
             "epochs": self.epochs,
             "solver": self.solver,
             "scale_x": self.scale_x,
+            "use_ensemble": self.use_ensemble,
             "n_estimators": self.n_estimators,
         }
 
