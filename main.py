@@ -48,8 +48,7 @@ class Helpers:
 
     @staticmethod
     def get_moons_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        # Increased noise to stress-test the model's variance
-        x_raw, y_raw = make_moons(n_samples=1100, noise=0.25, random_state=3)
+        x_raw, y_raw = make_moons(n_samples=500, noise=0.25, random_state=3)
 
         assert isinstance(x_raw, np.ndarray)
         assert isinstance(y_raw, np.ndarray)
@@ -57,7 +56,7 @@ class Helpers:
         y_trans: np.ndarray = np.where(y_raw == 0, -1.0, 1.0)
 
         x_tr, x_te, y_tr, y_te = train_test_split(
-            x_raw, y_trans, test_size=100, random_state=42
+            x_raw, y_trans, train_size=30, test_size=470, random_state=42
         )
 
         assert isinstance(x_tr, np.ndarray) and isinstance(x_te, np.ndarray)
@@ -118,10 +117,14 @@ class Tester:
 
         for config in configs:
             if config.use_ensemble and ensemble_pipeline is not None:
-                record = ensemble_pipeline.execute(config, x_train, y_train, x_val, y_val)
+                record = ensemble_pipeline.execute(
+                    config, x_train, y_train, x_val, y_val
+                )
             else:
                 record = pipeline.execute(config, x_train, y_train, x_val, y_val)
             tracker.log_run(record)
+
+            OutputFormatter.metric(f"Run [Ensemble={config.use_ensemble}]", record.metrics.primary_score, indent=12)
 
         best_run: RunRecord | None = tracker.get_best_run()
         if best_run is None:
@@ -183,9 +186,7 @@ class Tester:
     def run_moons(self) -> None:
         x_train, y_train, x_test, y_test = Helpers.get_moons_data()
         configs = GridSearch.generate(
-            degree=[3],
-            use_ensemble=[False, True],
-            n_estimators=[15]
+            degree=[5], use_ensemble=[False, True], n_estimators=[25]
         )
 
         best_run, tracker = self._run_search(
@@ -197,7 +198,7 @@ class Tester:
             x_val=x_test,
             y_val=y_test,
             maximise=True,
-            ensemble_pipeline=ClassificationEnsemble(config=Hyperparameters())
+            ensemble_pipeline=ClassificationEnsemble(config=Hyperparameters()),
         )
         Visualiser.plot_hyperparameter_comparison(
             tracker.all_runs(), "use_ensemble", "Moons Dataset: Impact of Ensembling"
